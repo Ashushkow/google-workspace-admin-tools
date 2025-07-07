@@ -43,7 +43,7 @@ class AdminToolsMainWindow(tk.Tk):
         # Инициализация интерфейса
         self.setup_ui()
         
-        # Отложенная инициализация
+        # Отложенная инициализация UI
         self.after(1000, self._delayed_init)
         
         # Статус соединения
@@ -518,3 +518,8 @@ class AdminToolsMainWindow(tk.Tk):
             self.status_label.config(text='Загрузка статистики...')
         
         async_manager.run_async(load_data, on_success, on_error)
+
+    def _delayed_init(self):
+        """Отложенная инициализация после создания UI"""
+        self._ui_initialized = True
+        self.log_activity('Приложение готово к работе')
