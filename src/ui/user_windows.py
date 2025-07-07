@@ -9,8 +9,8 @@ import string
 import random
 from typing import Any, Optional
 
-from ui_components import ModernColors, center_window
-from users_api import create_user, update_user, delete_user, get_user_list
+from .ui_components import ModernColors, center_window
+from ..api.users_api import create_user, update_user, delete_user, get_user_list
 
 
 class CreateUserWindow(tk.Toplevel):

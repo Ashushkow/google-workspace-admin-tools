@@ -7,13 +7,13 @@ import tkinter as tk
 from tkinter import messagebox, ttk, simpledialog
 from typing import Any, Optional, List, Dict
 
-from ui_components import ModernColors, ModernButton, center_window
-from groups_api import (
+from .ui_components import ModernColors, ModernButton, center_window
+from ..api.groups_api import (
     list_groups, create_group, delete_group, update_group,
     get_group_members, add_user_to_group, remove_user_from_group
 )
-from users_api import get_user_list
-from data_cache import data_cache
+from ..api.users_api import get_user_list
+from ..utils.data_cache import data_cache
 
 
 class GroupManagementWindow(tk.Toplevel):
