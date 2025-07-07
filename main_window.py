@@ -32,7 +32,7 @@ class AdminToolsMainWindow(tk.Tk):
         self._ui_initialized = False
         
         # Настройка главного окна
-        self.title('Admin Team Tools - Управление пользователями Google Workspace')
+        self.title('Admin Team Tools v2.0 - Управление пользователями Google Workspace')
         self.geometry('750x500')
         self.configure(bg=ModernColors.BACKGROUND)
         self.resizable(True, True)
@@ -482,93 +482,10 @@ class AdminToolsMainWindow(tk.Tk):
             self.log_activity(f'Ошибка экспорта пользователей: {str(e)}', 'ERROR')
             messagebox.showerror('Ошибка', f'Ошибка экспорта: {str(e)}')
 
-    def _on_system_alert(self, message: str, notification_type=None):
-        """Обработчик системных уведомлений"""
-        if not self._ui_initialized or not hasattr(self, 'log_text'):
-            return
-        
-        try:
-            # Проверяем доступность системы уведомлений
-            if self.notification_center and hasattr(self.notification_center, 'show_notification'):
-                from monitoring_system import NotificationType
-                if notification_type is None:
-                    notification_type = NotificationType.INFO
-                self.notification_center.show_notification(message, notification_type)
-            
-            # Логируем критические проблемы
-            if notification_type and str(notification_type) in ['NotificationType.ERROR', 'NotificationType.CRITICAL']:
-                self.log_activity(f"Системное предупреждение: {message}", 'ERROR')
-            else:
-                self.log_activity(f"Системное уведомление: {message}", 'INFO')
-                
-        except Exception as e:
-            print(f"Ошибка в обработчике системных уведомлений: {e}")
-            # Fallback - просто логируем
-            if hasattr(self, 'log_activity'):
-                self.log_activity(f"Системное уведомление: {message}", 'INFO')
-
     def load_statistics_async(self):
         """Асинхронная загрузка статистики"""
         if not self._ui_initialized or not hasattr(self, 'total_users_label'):
             # Если UI не готов, отложим загрузку
-            self.after(500, self.load_statistics_async)
-            return
-            
-        def load_data():
-            if not self.service:
-                return None, None
-            
-            users = get_user_list(self.service)
-            groups = list_groups(self.service)
-            return users, groups
-        
-        def on_success(result):
-            if not hasattr(self, 'total_users_label'):
-                return
-                
-            users, groups = result
-            if users is not None and groups is not None:
-                users_count = len(users)
-                groups_count = len(groups)
-                self.total_users_label.config(text=f'Пользователи: {users_count}')
-                self.total_groups_label.config(text=f'Группы: {groups_count}')
-                self.log_activity(f'Статистика обновлена: {users_count} пользователей, {groups_count} групп')
-                
-                # Обновляем активность сессии
-                try:
-                    from security_manager import security_manager
-                    security_manager.update_activity()
-                except ImportError:
-                    pass
-        
-        def on_error(error):
-            if hasattr(self, 'log_activity'):
-                self.log_activity(f'Ошибка загрузки статистики: {str(error)}', 'ERROR')
-            
-            try:
-                if self.notification_center:
-                    from monitoring_system import NotificationType
-                    self.notification_center.show_notification(
-                        "Ошибка загрузки статистики", 
-                        NotificationType.ERROR
-                    )
-            except (ImportError, AttributeError):
-                pass
-        
-        # Показываем прогресс
-        if hasattr(self, 'status_label'):
-            self.status_label.config(text='Загрузка статистики...')
-        
-        self.async_manager.run_async(load_data, on_success, on_error)
-
-    def _delayed_init(self):
-        """Отложенная инициализация после создания UI"""
-        self._ui_initialized = True
-        self.log_activity('Приложение готово к работе')
-
-    def load_statistics_async(self):
-        """Асинхронная загрузка статистики"""
-        if not self._ui_initialized or not hasattr(self, 'total_users_label'):
             self.after(500, self.load_statistics_async)
             return
             
@@ -601,5 +518,3 @@ class AdminToolsMainWindow(tk.Tk):
             self.status_label.config(text='Загрузка статистики...')
         
         async_manager.run_async(load_data, on_success, on_error)
-
-    # ...existing code...
