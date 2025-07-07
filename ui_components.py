@@ -17,7 +17,8 @@ class ModernColors:
     SUCCESS = "#10b981"       # Зеленый для успешных операций
     WARNING = "#f59e0b"       # Оранжевый для предупреждений
     DANGER = "#ef4444"        # Красный для ошибок и удаления
-    SECONDARY = "#6b7280"     # Серый для второстепенных элементов
+    SECONDARY = "#374151"     # Темно-серый для второстепенных элементов (было #6b7280)
+    SECONDARY_DARK = "#111827" # Почти черный для hover
     BACKGROUND = "#f8fafc"    # Светло-серый фон приложения
     SURFACE = "#ffffff"       # Белый фон для карточек
     CARD_BG = "#ffffff"       # Белый фон для карточек (алиас)
@@ -52,7 +53,7 @@ class ModernButton(tk.Button):
             'danger': (ModernColors.DANGER, '#dc2626', 'white'),
             'warning': (ModernColors.WARNING, '#d97706', 'white'),
             'info': (ModernColors.INFO, '#0284c7', 'white'),
-            'secondary': (ModernColors.SURFACE, ModernColors.BACKGROUND, ModernColors.TEXT_PRIMARY)
+            'secondary': (ModernColors.SECONDARY, ModernColors.SECONDARY_DARK, 'white')
         }
         
         bg_color, hover_color, text_color = color_map.get(button_type, color_map['primary'])
