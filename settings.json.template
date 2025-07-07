@@ -1,0 +1,14 @@
+{
+    "domain": "your-domain.com",
+    "admin_email": "admin@your-domain.com",
+    "default_password_length": 12,
+    "default_org_unit": "/",
+    "auto_generate_password": true,
+    "enable_logging": true,
+    "cache_ttl": 300,
+    "max_users_per_request": 500,
+    "ui_theme": "modern",
+    "auto_refresh_interval": 30,
+    "export_format": "csv",
+    "date_format": "%Y-%m-%d %H:%M:%S"
+}

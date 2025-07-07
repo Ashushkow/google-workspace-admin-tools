@@ -1,0 +1,18 @@
+{
+  "window_width": 750,
+  "window_height": 500,
+  "theme": "light",
+  "language": "ru",
+  "api_timeout": 30,
+  "max_retries": 3,
+  "cache_duration": 300,
+  "users_per_page": 100,
+  "groups_per_page": 100,
+  "auto_logout_minutes": 60,
+  "require_confirmation": true,
+  "log_sensitive_data": false,
+  "max_concurrent_requests": 5,
+  "ui_update_interval": 100,
+  "asana_workspace": "",
+  "smtp_enabled": false
+}
