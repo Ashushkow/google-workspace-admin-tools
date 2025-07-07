@@ -15,7 +15,7 @@ SCOPES = [
 ]
 CREDENTIALS_FILE = 'credentials.json'
 TOKEN_PICKLE = 'token.pickle'
-SETTINGS_FILE = 'settings.json'
+SETTINGS_FILE = 'config/settings.json'
 
 # --- Загрузка настроек из settings.json ---
 def load_settings() -> Dict[str, Any]:

@@ -1,66 +1,51 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Главный файл приложения Admin Team Tools.
-Точка входа в приложение для управления пользователями Google Workspace.
+Точка входа в приложение Admin Team Tools.
+Приложение для управления пользователями Google Workspace.
 """
 
+import sys
 import tkinter as tk
 from tkinter import messagebox
-import sys
-import os
 
-# Добавляем текущую директорию в путь для импорта модулей
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-try:
-    from main_window import AdminToolsMainWindow
-    from auth import get_service
-    from config import CREDENTIALS_FILE
-except ImportError as e:
-    messagebox.showerror(
-        'Ошибка импорта', 
-        f'Не удалось импортировать необходимые модули: {e}\n'
-        'Убедитесь, что все файлы модулей находятся в той же директории.'
-    )
-    sys.exit(1)
-
-
-def main():
-    """
-    Главная функция приложения.
-    Инициализирует главное окно и запускает GUI.
-    """
-    # Проверяем наличие файла credentials.json
-    if not os.path.exists(CREDENTIALS_FILE):
-        messagebox.showerror(
-            'Ошибка конфигурации',
-            f'Файл {CREDENTIALS_FILE} не найден.\n'
-            'Скачайте его из Google Cloud Console и поместите в папку с приложением.'
-        )
-        return
-    
+def run_application():
+    """Запуск основного приложения"""
     try:
-        # Создаем главное окно
-        root = tk.Tk()
-        root.withdraw()  # Скрываем корневое окно
+        # Импорт основных модулей
+        from src.auth import get_service
+        from src.ui.main_window import AdminToolsMainWindow
         
-        # Инициализируем сервис Google API
-        service = get_service()
+        # Создание основного окна
+        root = AdminToolsMainWindow()
         
-        # Создаем и показываем главное окно приложения
-        app = AdminToolsMainWindow(service=service)
+        # Попытка авторизации
+        try:
+            service = get_service()
+            root.service = service
+            root.check_service_status()
+        except Exception as e:
+            messagebox.showerror(
+                "Ошибка авторизации", 
+                f"Не удалось подключиться к Google API:\n{str(e)}\n\n"
+                "Убедитесь, что файл credentials.json настроен правильно."
+            )
         
-        # Запускаем главный цикл событий
-        app.mainloop()
+        # Запуск главного цикла
+        root.mainloop()
         
+    except ImportError as e:
+        messagebox.showerror(
+            "Ошибка модулей", 
+            f"Не удалось загрузить необходимые модули:\n{str(e)}\n\n"
+            "Проверьте, что все файлы проекта находятся в рабочей директории."
+        )
     except Exception as e:
         messagebox.showerror(
-            'Ошибка запуска',
-            f'Произошла ошибка при запуске приложения:\n{str(e)}\n\n'
-            'Проверьте подключение к интернету и настройки Google API.'
+            "Критическая ошибка", 
+            f"Произошла непредвиденная ошибка:\n{str(e)}"
         )
-        print(f"Ошибка: {e}")
 
-
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    # Запуск приложения
+    run_application()

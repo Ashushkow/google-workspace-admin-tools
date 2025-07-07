@@ -5,7 +5,7 @@ API функции для работы с пользователями Google Wo
 
 from typing import Any, List, Dict, Optional, Tuple
 from googleapiclient.errors import HttpError
-from data_cache import data_cache
+from ..utils.data_cache import data_cache
 
 
 def user_exists(service: Any, email: str) -> Optional[bool]:

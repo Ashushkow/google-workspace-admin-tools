@@ -8,9 +8,9 @@ from tkinter import messagebox, scrolledtext, ttk
 import requests
 from typing import Any, Optional
 
-from ui_components import ModernColors, ModernButton, center_window
-from groups_api import list_groups, add_user_to_group
-from config import load_settings
+from .ui_components import ModernColors, ModernButton, center_window
+from ..api.groups_api import list_groups, add_user_to_group
+from ..config import load_settings
 
 
 class AsanaInviteWindow(tk.Toplevel):

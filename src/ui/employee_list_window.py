@@ -8,9 +8,9 @@ from tkinter import messagebox, ttk
 import threading
 from typing import Any, List, Dict
 
-from ui_components import ModernColors, ModernButton, center_window
-from users_api import get_user_list
-from data_cache import data_cache
+from .ui_components import ModernColors, ModernButton, center_window
+from ..api.users_api import get_user_list
+from ..utils.data_cache import data_cache
 
 
 class EmployeeListWindow(tk.Toplevel):
@@ -32,6 +32,7 @@ class EmployeeListWindow(tk.Toplevel):
         # Инициализация данных
         self.employees = []
         self.all_employees = []
+        self.data_loaded = False
 
         self._create_widgets()
         self.load_employees()
@@ -91,7 +92,8 @@ class EmployeeListWindow(tk.Toplevel):
                                font=('Segoe UI', 9), width=20, relief='flat', 
                                bd=1, bg=ModernColors.SURFACE)
         search_entry.pack(side='left', padx=(0, 15))
-        search_entry.bind('<KeyRelease>', self.apply_filters)
+        search_entry.bind('<KeyRelease>', lambda event: self.apply_filters())
+        search_entry.bind('<Return>', lambda event: self.apply_filters())
         
         # Статус
         tk.Label(filter_row1, text='Статус:', bg=ModernColors.BACKGROUND, 
@@ -103,7 +105,7 @@ class EmployeeListWindow(tk.Toplevel):
                                    values=["Все", "Active", "Suspended"], 
                                    state="readonly", width=10, font=('Segoe UI', 9))
         status_combo.pack(side='left', padx=(0, 15))
-        status_combo.bind('<<ComboboxSelected>>', self.apply_filters)
+        status_combo.bind('<<ComboboxSelected>>', lambda event: self.apply_filters())
 
     def _create_filter_row2(self, parent):
         """Создает вторую строку фильтров"""
@@ -119,7 +121,7 @@ class EmployeeListWindow(tk.Toplevel):
         self.orgunit_combo = ttk.Combobox(filter_row2, textvariable=self.orgunit_var, 
                                          state="readonly", width=15, font=('Segoe UI', 9))
         self.orgunit_combo.pack(side='left', padx=(0, 15))
-        self.orgunit_combo.bind('<<ComboboxSelected>>', self.apply_filters)
+        self.orgunit_combo.bind('<<ComboboxSelected>>', lambda event: self.apply_filters())
         
         # Даты
         tk.Label(filter_row2, text='Дата с:', bg=ModernColors.BACKGROUND, 
@@ -130,7 +132,8 @@ class EmployeeListWindow(tk.Toplevel):
         date_from_entry = tk.Entry(filter_row2, textvariable=self.date_from_var, 
                                   font=('Segoe UI', 9), width=10, relief='flat', bd=1)
         date_from_entry.pack(side='left', padx=(0, 8))
-        date_from_entry.bind('<KeyRelease>', self.apply_filters)
+        date_from_entry.bind('<KeyRelease>', lambda event: self.apply_filters())
+        date_from_entry.bind('<Return>', lambda event: self.apply_filters())
         
         tk.Label(filter_row2, text='по:', bg=ModernColors.BACKGROUND, 
                 fg=ModernColors.TEXT_PRIMARY, font=('Segoe UI', 9, 'bold')).pack(
@@ -140,7 +143,8 @@ class EmployeeListWindow(tk.Toplevel):
         date_to_entry = tk.Entry(filter_row2, textvariable=self.date_to_var, 
                                 font=('Segoe UI', 9), width=10, relief='flat', bd=1)
         date_to_entry.pack(side='left', padx=(0, 15))
-        date_to_entry.bind('<KeyRelease>', self.apply_filters)
+        date_to_entry.bind('<KeyRelease>', lambda event: self.apply_filters())
+        date_to_entry.bind('<Return>', lambda event: self.apply_filters())
         
         # Кнопки управления
         reset_btn = ModernButton(filter_row2, text='Сбросить фильтры', 
@@ -225,6 +229,7 @@ class EmployeeListWindow(tk.Toplevel):
     def load_employees(self):
         """Загружает список сотрудников асинхронно"""
         self.total_label.config(text="⏳ Загрузка данных...")
+        self.data_loaded = False
         
         # Сброс фильтров
         self.search_var.set("")
@@ -240,19 +245,30 @@ class EmployeeListWindow(tk.Toplevel):
                 
                 employees = []
                 for user in users:
+                    # Более надежное извлечение данных
+                    name_info = user.get('name', {})
+                    full_name = name_info.get('fullName', '') if isinstance(name_info, dict) else ''
+                    
+                    creation_time = user.get('creationTime', '')
+                    if creation_time and len(creation_time) > 10:
+                        creation_date = creation_time[:10]  # Берем только дату
+                    else:
+                        creation_date = ''
+                    
                     employee = {
                         'email': user.get('primaryEmail', ''),
-                        'name': user.get('name', {}).get('fullName', ''),
+                        'name': full_name,
                         'status': 'Suspended' if user.get('suspended', False) else 'Active',
-                        'orgunit': user.get('orgUnitPath', ''),
-                        'created': user.get('creationTime', '')[:10] if user.get('creationTime') else ''
+                        'orgunit': user.get('orgUnitPath', '/'),  # По умолчанию корневое подразделение
+                        'created': creation_date
                     }
                     employees.append(employee)
                 
-                self.after_idle(self._update_ui_with_data, employees)
+                # Используем after вместо after_idle для более надежного обновления UI
+                self.after(100, self._update_ui_with_data, employees)
                 
             except Exception as e:
-                self.after_idle(self._show_load_error, str(e))
+                self.after(100, self._show_load_error, str(e))
         
         threading.Thread(target=load_data_async, daemon=True).start()
     
@@ -261,15 +277,19 @@ class EmployeeListWindow(tk.Toplevel):
         try:
             self.employees = employees
             self.all_employees = self.employees.copy()
+            self.data_loaded = True
             
             # Заполняем список подразделений для фильтра
-            orgunits = list(set(emp['orgunit'] for emp in self.employees if emp['orgunit']))
+            orgunits = list(set(emp.get('orgunit', '') for emp in self.employees if emp.get('orgunit', '').strip()))
+            orgunits = [ou for ou in orgunits if ou.strip()]  # Убираем пустые строки
             orgunits.sort()
-            self.orgunit_combo['values'] = ["Все"] + orgunits
+            if hasattr(self, 'orgunit_combo'):
+                self.orgunit_combo['values'] = ["Все"] + orgunits
             
             self.display_employees(self.employees)
             
         except Exception as e:
+            print(f"Ошибка обновления UI: {e}")
             self._show_load_error(f"Ошибка обработки данных: {e}")
     
     def _show_load_error(self, error_message: str):
@@ -279,89 +299,199 @@ class EmployeeListWindow(tk.Toplevel):
 
     def display_employees(self, employees: List[Dict]):
         """Отображает сотрудников в Treeview с оптимизацией"""
-        # Очищаем существующие записи
-        for row in self.tree.get_children():
-            self.tree.delete(row)
-        
-        # Добавляем новые записи батчами для лучшей производительности
-        batch_size = 100
-        for i in range(0, len(employees), batch_size):
-            batch = employees[i:i + batch_size]
-            for emp in batch:
-                self.tree.insert('', 'end', values=(
-                    emp['email'], emp['name'], emp['status'], 
-                    emp['orgunit'], emp['created']
-                ))
+        try:
+            print(f"DEBUG: display_employees вызван с {len(employees)} записями")
+            # Очищаем существующие записи
+            print("DEBUG: Очистка таблицы перед добавлением новых записей")
+            for row in self.tree.get_children():
+                self.tree.delete(row)
             
-            self.update_idletasks()
-        
-        # Обновляем счетчик
-        if hasattr(self, 'total_label'):
-            self.total_label.config(text=f"📊 Показано: {len(employees)} из {len(self.all_employees)}")
+            # Добавляем новые записи батчами для лучшей производительности
+            batch_size = 100
+            for i in range(0, len(employees), batch_size):
+                batch = employees[i:i + batch_size]
+                for emp in batch:
+                    print(f"DEBUG: Добавление записи в таблицу: {emp}")
+                    self.tree.insert('', 'end', values=(
+                        emp.get('email', ''), 
+                        emp.get('name', ''), 
+                        emp.get('status', ''), 
+                        emp.get('orgunit', ''), 
+                        emp.get('created', '')
+                    ))
+                
+                self.update_idletasks()
+                print("DEBUG: UI обновлен после добавления записей")
+                # Удаляем всплывающее окно, оставляем только обновление UI
+                self.total_label.config(text=f"📊 Показано: {len(employees)} из {total_employees}")
+                self.update_idletasks()
+                print("DEBUG: UI обновлен после добавления записей")
+            
+            # Обновляем счетчик
+            if hasattr(self, 'total_label'):
+                total_employees = len(self.all_employees) if hasattr(self, 'all_employees') else 0
+                self.total_label.config(text=f"📊 Показано: {len(employees)} из {total_employees}")
+                self.update_idletasks()  # Обновляем UI для отображения актуального количества записей
+                print(f"DEBUG: Обновлено total_label: Показано {len(employees)} из {total_employees}")
+                
+        except Exception as e:
+            print(f"Ошибка отображения сотрудников: {e}")
+            if hasattr(self, 'total_label'):
+                self.total_label.config(text="❌ Ошибка отображения данных")
 
     def apply_filters(self, event=None):
         """Применяет все активные фильтры"""
-        query = self.search_var.get().lower()
-        status = self.status_var.get()
-        orgunit = self.orgunit_var.get()
-        date_from = self.date_from_var.get().strip()
-        date_to = self.date_to_var.get().strip()
+        print(f"DEBUG: apply_filters вызван, data_loaded={getattr(self, 'data_loaded', False)}")
+        print(f"DEBUG: Статус фильтра: {self.status_var.get()}")
+        print(f"DEBUG: Всего записей до фильтрации: {len(self.all_employees)}")
         
-        filtered = []
-        for emp in self.all_employees:
-            # Фильтр по поиску (email и имя)
-            if query and not (query in emp['email'].lower() or query in emp['name'].lower()):
-                continue
+        # Проверяем, что данные загружены
+        if not self.data_loaded or not hasattr(self, 'all_employees'):
+            print("DEBUG: Данные не загружены или all_employees отсутствует")
+            return
             
-            # Фильтр по статусу
-            if status != "Все" and emp['status'] != status:
-                continue
+        try:
+            query = self.search_var.get().lower().strip()
+            status = self.status_var.get()
+            orgunit = self.orgunit_var.get()
+            date_from = self.date_from_var.get().strip()
+            date_to = self.date_to_var.get().strip()
             
-            # Фильтр по подразделению
-            if orgunit != "Все" and emp['orgunit'] != orgunit:
-                continue
+            print(f"DEBUG: Фильтры - поиск:'{query}', статус:'{status}', подразделение:'{orgunit}', даты:'{date_from}'-'{date_to}'")
+            print(f"DEBUG: Всего записей: {len(self.all_employees)}")
             
-            # Фильтр по дате создания
-            if date_from or date_to:
-                emp_date = emp['created']
-                if date_from and emp_date < date_from:
+            filtered = []
+            for emp in self.all_employees:
+                # Фильтр по поиску (email и имя)
+                if query:
+                    emp_email = emp.get('email', '').lower()
+                    emp_name = emp.get('name', '').lower()
+                    if query not in emp_email and query not in emp_name:
+                        continue
+                
+                # Фильтр по статусу
+                if status != "Все" and emp.get('status', '') != status:
                     continue
-                if date_to and emp_date > date_to:
+                
+                # Фильтр по подразделению
+                if orgunit != "Все" and emp.get('orgunit', '') != orgunit:
                     continue
+                
+                # Фильтр по дате создания (простое сравнение строк в формате YYYY-MM-DD)
+                if date_from or date_to:
+                    emp_date = emp.get('created', '')
+                    if emp_date:  # Проверяем, что дата не пустая
+                        if date_from and len(date_from) >= 10 and emp_date < date_from:
+                            continue
+                        if date_to and len(date_to) >= 10 and emp_date > date_to:
+                            continue
+                
+                filtered.append(emp)
             
-            filtered.append(emp)
-        
-        self.display_employees(filtered)
+            print(f"DEBUG: После фильтрации осталось: {len(filtered)} записей")
+            self.display_employees(filtered)
+            print(f"DEBUG: Метод display_employees вызван с {len(filtered)} записями")
+            self.display_employees(filtered)
+            print(f"DEBUG: Метод display_employees вызван с {len(filtered)} записями")
+            self.display_employees(filtered)
+            
+        except Exception as e:
+            print(f"Ошибка применения фильтров: {e}")
+            # Показываем все данные в случае ошибки
+            if hasattr(self, 'all_employees'):
+                self.display_employees(self.all_employees)
 
     def reset_filters(self):
         """Сбрасывает все фильтры"""
-        self.search_var.set("")
-        self.status_var.set("Все")
-        self.orgunit_var.set("Все")
-        self.date_from_var.set("")
-        self.date_to_var.set("")
-        self.display_employees(self.all_employees)
+        try:
+            self.search_var.set("")
+            self.status_var.set("Все")
+            self.orgunit_var.set("Все")
+            self.date_from_var.set("")
+            self.date_to_var.set("")
+            
+            if hasattr(self, 'all_employees') and self.data_loaded:
+                self.display_employees(self.all_employees)
+        except Exception as e:
+            print(f"Ошибка сброса фильтров: {e}")
     
     def refresh_data(self):
         """Принудительно обновляет данные пользователей"""
-        data_cache.clear_cache()
-        self.load_employees()
+        try:
+            self.data_loaded = False
+            data_cache.clear_cache()
+            self.load_employees()
+        except Exception as e:
+            print(f"Ошибка обновления данных: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось обновить данные: {e}")
 
     def sort_column(self, col: str, reverse: bool):
         """Сортирует данные в колонке"""
-        # Получаем текущие отображаемые данные
-        current_data = []
-        for item in self.tree.get_children():
-            values = self.tree.item(item)['values']
-            current_data.append({
-                'email': values[0],
-                'name': values[1], 
-                'status': values[2],
-                'orgunit': values[3],
-                'created': values[4]
-            })
-        
-        # Сортируем текущие данные
-        current_data.sort(key=lambda x: x[col], reverse=reverse)
-        self.display_employees(current_data)
-        self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
+        try:
+            # Проверяем, что данные загружены
+            if not self.data_loaded or not hasattr(self, 'all_employees'):
+                return
+                
+            # Сначала применяем фильтры к всем данным
+            filtered_data = self._get_filtered_data()
+            
+            # Сортируем отфильтрованные данные
+            if filtered_data:
+                # Определяем функцию сортировки в зависимости от колонки
+                if col == 'created':
+                    # Для дат используем специальную сортировку
+                    filtered_data.sort(key=lambda x: x.get(col, ''), reverse=reverse)
+                else:
+                    # Для остальных колонок - обычная сортировка
+                    filtered_data.sort(key=lambda x: x.get(col, '').lower(), reverse=reverse)
+                
+                self.display_employees(filtered_data)
+                
+            # Обновляем заголовок для следующего клика
+            self.tree.heading(col, command=lambda: self.sort_column(col, not reverse))
+            
+        except Exception as e:
+            print(f"Ошибка сортировки: {e}")
+    
+    def _get_filtered_data(self):
+        """Возвращает отфильтрованные данные согласно текущим фильтрам"""
+        try:
+            query = self.search_var.get().lower().strip()
+            status = self.status_var.get()
+            orgunit = self.orgunit_var.get()
+            date_from = self.date_from_var.get().strip()
+            date_to = self.date_to_var.get().strip()
+            
+            filtered = []
+            for emp in self.all_employees:
+                # Фильтр по поиску (email и имя)
+                if query:
+                    emp_email = emp.get('email', '').lower()
+                    emp_name = emp.get('name', '').lower()
+                    if query not in emp_email and query not in emp_name:
+                        continue
+                
+                # Фильтр по статусу
+                if status != "Все" and emp.get('status', '') != status:
+                    continue
+                
+                # Фильтр по подразделению
+                if orgunit != "Все" and emp.get('orgunit', '') != orgunit:
+                    continue
+                
+                # Фильтр по дате создания
+                if date_from or date_to:
+                    emp_date = emp.get('created', '')
+                    if emp_date:
+                        if date_from and len(date_from) >= 10 and emp_date < date_from:
+                            continue
+                        if date_to and len(date_to) >= 10 and emp_date > date_to:
+                            continue
+                
+                filtered.append(emp)
+            
+            return filtered
+            
+        except Exception as e:
+            print(f"Ошибка получения отфильтрованных данных: {e}")
+            return self.all_employees if hasattr(self, 'all_employees') else []

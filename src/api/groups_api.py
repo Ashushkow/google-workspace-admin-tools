@@ -4,7 +4,7 @@ API функции для работы с группами Google Workspace.
 """
 
 from typing import Any, List, Dict
-from data_cache import data_cache
+from ..utils.data_cache import data_cache
 
 
 def list_groups(service: Any, force_refresh: bool = False) -> List[Dict[str, Any]]:

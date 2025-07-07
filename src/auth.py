@@ -9,7 +9,7 @@ from typing import Any
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
-from config import SCOPES, CREDENTIALS_FILE, TOKEN_PICKLE
+from .config import SCOPES, CREDENTIALS_FILE, TOKEN_PICKLE
 
 
 def get_service() -> Any:
