@@ -1,17 +1,17 @@
-# 🚀 Admin Team Tools - .gitignore
-
-# 🔐 Google API credentials (КРИТИЧЕСКИ ВАЖНО!)
+# 🔒 Секретные файлы
 credentials.json
 token.pickle
-.security_key
+*.key
+*.pem
+*.p12
+config/credentials.json
+config/token.pickle
 
-# 🐍 Python cache & compiled files
+# 🐍 Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
-
-# 📦 Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -25,17 +25,13 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
 
-# 🔧 PyInstaller
-*.manifest
-*.spec
-
-# 📊 Unit test / coverage reports
-htmlcov/
+# 🧪 Тестирование
 .tox/
 .nox/
 .coverage
@@ -47,14 +43,30 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+cover/
 
-# 📚 Jupyter Notebook
+# 🌍 Переводы
+*.mo
+*.pot
+
+# 📊 Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# 🌶️ Flask
+instance/
+.webassets-cache
+
+# 📓 Jupyter Notebook
 .ipynb_checkpoints
 
-# 🔄 pyenv
-.python-version
+# 🔬 IPython
+profile_default/
+ipython_config.py
 
-# 🌐 Virtual environments
+# 🌐 Environments
 .env
 .venv
 env/
@@ -63,47 +75,83 @@ ENV/
 env.bak/
 venv.bak/
 
-# 📝 Logs & temporary files
+# 🎯 VSCode
+.vscode/
+*.code-workspace
+
+# 🧠 PyCharm
+.idea/
+
+# 💻 macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 🪟 Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# 🐧 Linux
+*~
+
+# 📦 Логи и временные файлы
 *.log
-logs/
-admin_log.json
 *.tmp
 *.temp
-*~
-*.backup
-*.bak
-
-# 💻 IDE & editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# 🖥️ OS specific
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-desktop.ini
-
-# ⚙️ Configuration files with sensitive data
-config/credentials.json
-config/local_settings.json
-config/settings.json
-
-# 📁 Backup & temporary directories
-backup/
+logs/
 temp/
 
-# 📖 Documentation build
-docs/_build/
-docs/build/
+# 🗃️ Базы данных
+*.db
+*.sqlite
+*.sqlite3
 
-# 🔄 Development environments
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# 🔄 Backup файлы
+*.bak
+*.backup
+*~
+
+# 📸 Скриншоты (оставляем только в docs/images/)
+*.png
+*.jpg
+*.jpeg
+*.gif
+!docs/images/*.png
+!docs/images/*.jpg
+!docs/images/*.jpeg
+!docs/images/*.gif
+
+# 📁 Служебные папки
+node_modules/
+.npm
+.yarn/
+
+# 🏗️ Build артефакты
+*.exe
+*.dmg
+*.pkg
+*.deb
+*.rpm
+
+# 📋 Конфигурационные файлы с секретами
+config/settings.json
+!config/settings.json.template
+
+# 🚀 Релизные файлы
+ГОТОВ_К_РЕЛИЗУ.txt
+РЕЛИЗ_CHECKLIST.txt
+ВЫКЛАДКА_В_GIT_ИНСТРУКЦИЯ.md
+*_ГОТОВ_*
+*_РЕЛИЗ_*
+*_CHECKLIST_*
