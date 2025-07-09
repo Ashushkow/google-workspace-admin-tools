@@ -9,6 +9,7 @@ from typing import Optional, Any, Callable
 from ..ui_components import ModernColors, ModernButton
 from ...api.users_api import get_user_list
 from ...api.groups_api import list_groups
+from ...themes.theme_manager import theme_manager
 
 
 class StatisticsPanel(tk.Frame):
@@ -18,12 +19,16 @@ class StatisticsPanel(tk.Frame):
     
     def __init__(self, parent: tk.Widget, service: Optional[Any] = None, 
                  quick_actions_callbacks: Optional[dict] = None):
-        super().__init__(parent, bg=ModernColors.CARD_BG, relief='solid', bd=1)
+        super().__init__(parent, relief='solid', bd=1)
         
         self.service = service
         self.callbacks = quick_actions_callbacks or {}
         
         self._setup_ui()
+        self.apply_theme()
+        
+        # Подписываемся на изменения темы
+        theme_manager.add_theme_change_callback(self.on_theme_changed)
         
     def _setup_ui(self):
         """Настройка пользовательского интерфейса панели"""
@@ -35,16 +40,15 @@ class StatisticsPanel(tk.Frame):
     def _create_statistics_section(self):
         """Создание секции статистики"""
         # Заголовок панели
-        tk.Label(
+        self.title_label = tk.Label(
             self,
             text='📊 Статистика',
-            font=('Arial', 12, 'bold'),
-            bg=ModernColors.CARD_BG,
-            fg=ModernColors.TEXT_PRIMARY
-        ).pack(anchor='w', pady=(0, 10))
+            font=('Arial', 12, 'bold')
+        )
+        self.title_label.pack(anchor='w', pady=(0, 10))
         
         # Статистические карточки
-        self.stats_frame = tk.Frame(self, bg=ModernColors.CARD_BG)
+        self.stats_frame = tk.Frame(self)
         self.stats_frame.pack(fill='x', pady=(0, 15))
         
         self.total_users_label = tk.Label(
@@ -130,3 +134,38 @@ class StatisticsPanel(tk.Frame):
     def refresh(self):
         """Принудительное обновление статистики"""
         return self.load_statistics()
+    
+    def apply_theme(self):
+        """Применение текущей темы"""
+        if not theme_manager.current_theme:
+            return
+            
+        theme = theme_manager.current_theme
+        
+        # Применяем цвета к основному фрейму
+        self.config(bg=theme.get_color('secondary'))
+        
+        # Обновляем все дочерние элементы
+        for widget in self.winfo_children():
+            self._apply_theme_to_widget(widget, theme)
+            
+    def _apply_theme_to_widget(self, widget, theme):
+        """Применение темы к виджету"""
+        try:
+            if isinstance(widget, tk.Label):
+                widget.config(
+                    bg=theme.get_color('secondary'),
+                    fg=theme.get_color('text_primary')
+                )
+            elif isinstance(widget, tk.Frame):
+                widget.config(bg=theme.get_color('secondary'))
+                # Рекурсивно применяем к дочерним элементам
+                for child in widget.winfo_children():
+                    self._apply_theme_to_widget(child, theme)
+        except tk.TclError:
+            # Игнорируем ошибки для виджетов, которые не поддерживают эти опции
+            pass
+            
+    def on_theme_changed(self, theme):
+        """Обработчик изменения темы"""
+        self.apply_theme()

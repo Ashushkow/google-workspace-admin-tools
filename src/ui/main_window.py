@@ -21,6 +21,9 @@ from ..api.groups_api import list_groups
 from ..utils.data_cache import data_cache
 from ..utils.simple_utils import async_manager, error_handler, SimpleProgressDialog, show_api_error
 from ..utils.ui_decorators import handle_service_errors, handle_ui_errors, log_operation, validate_email, measure_performance
+from ..themes.theme_manager import theme_manager
+from ..hotkeys.hotkey_manager import HotkeyManager
+from .components.theme_switcher import ThemeSwitcher
 
 
 class AdminToolsMainWindow(tk.Tk):
@@ -38,24 +41,29 @@ class AdminToolsMainWindow(tk.Tk):
         self.statistics_panel = None
         self.activity_log = None
         self.toolbar = None
+        self.theme_switcher = None
+        
+        # Инициализация менеджеров
+        self.hotkey_manager = HotkeyManager(self)
+        self._setup_hotkeys()
         
         # Настройка главного окна
-        self.title('Admin Team Tools v2.0 - Управление пользователями Google Workspace')
+        self.title('Admin Team Tools v2.0.5 - Управление пользователями Google Workspace')
         self.geometry('750x500')
-        self.configure(bg=ModernColors.BACKGROUND)
         self.resizable(True, True)
         
         # Центрируем окно
         self.center_window()
         
-        # Инициализация интерфейса
-        self.setup_ui()
+        # Применяем тему и загружаем настройки
+        self.apply_theme()
+        self._load_theme_preferences()
         
-        # Отложенная инициализация UI
-        self.after(1000, self._delayed_init)
+        # Подписываемся на изменения темы
+        theme_manager.add_theme_change_callback(self.on_theme_changed)
         
-        # Статус соединения
-        self.check_service_status()
+        # Настройка обработчика закрытия
+        self.protocol("WM_DELETE_WINDOW", self.quit_application)
 
     def center_window(self):
         """Центрирует окно на экране"""
@@ -68,7 +76,10 @@ class AdminToolsMainWindow(tk.Tk):
 
     def setup_ui(self):
         """Настройка пользовательского интерфейса"""
-        # Заголовок
+        # Создаем меню
+        self.create_menu()
+        
+        # Заголовок приложения
         self.create_header()
         
         # Панель инструментов
@@ -82,29 +93,124 @@ class AdminToolsMainWindow(tk.Tk):
 
     def create_header(self):
         """Создание заголовка приложения"""
-        header_frame = tk.Frame(self, bg=ModernColors.PRIMARY, height=60)
-        header_frame.pack(fill='x', padx=0, pady=0)
-        header_frame.pack_propagate(False)
+        self.header_frame = tk.Frame(self, height=60)
+        self.header_frame.pack(fill='x', padx=0, pady=0)
+        self.header_frame.pack_propagate(False)
         
         # Заголовок
-        title_label = tk.Label(
-            header_frame, 
+        self.title_label = tk.Label(
+            self.header_frame, 
             text='Admin Team Tools',
             font=('Arial', 16, 'bold'),
-            bg=ModernColors.PRIMARY,
             fg='white'
         )
-        title_label.pack(side='left', padx=15, pady=15)
+        self.title_label.pack(side='left', padx=15, pady=15)
+        
+        # Переключатель тем
+        self.theme_switcher = ThemeSwitcher(self.header_frame)
+        self.theme_switcher.pack(side='right', padx=(10, 5), pady=15)
         
         # Кнопка обновления данных
-        refresh_btn = ModernButton(
-            header_frame, 
+        self.refresh_btn = ModernButton(
+            self.header_frame, 
             text='🔄 Обновить',
             command=self.refresh_data,
             style='secondary',
             font=('Arial', 9)
         )
-        refresh_btn.pack(side='right', padx=15, pady=15)
+        self.refresh_btn.pack(side='right', padx=(5, 10), pady=15)
+
+    def create_menu(self):
+        """Создание меню"""
+        menubar = tk.Menu(self)
+        self.config(menu=menubar)
+        
+        # Меню "Файл"
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Файл", menu=file_menu)
+        file_menu.add_command(
+            label="Экспорт пользователей",
+            command=self.export_users,
+            accelerator="Ctrl+E"
+        )
+        file_menu.add_separator()
+        file_menu.add_command(
+            label="Выход",
+            command=self.quit_application,
+            accelerator="Ctrl+Q"
+        )
+        
+        # Меню "Пользователи"
+        users_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Пользователи", menu=users_menu)
+        users_menu.add_command(
+            label="Список пользователей",
+            command=self.open_employee_list,
+            accelerator="Ctrl+U"
+        )
+        users_menu.add_command(
+            label="Новый пользователь",
+            command=self.open_create_user,
+            accelerator="Ctrl+N"
+        )
+        users_menu.add_command(
+            label="Редактировать пользователя",
+            command=self.open_edit_user,
+            accelerator="Ctrl+Enter"
+        )
+        
+        # Меню "Группы"
+        groups_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Группы", menu=groups_menu)
+        groups_menu.add_command(
+            label="Управление группами",
+            command=self.open_group_management,
+            accelerator="Ctrl+G"
+        )
+        
+        # Меню "Вид"
+        view_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Вид", menu=view_menu)
+        
+        # Подменю тем
+        theme_menu = tk.Menu(view_menu, tearoff=0)
+        view_menu.add_cascade(label="Тема", menu=theme_menu)
+        theme_menu.add_command(
+            label="Светлая",
+            command=lambda: theme_manager.set_theme('light'),
+            accelerator="Ctrl+1"
+        )
+        theme_menu.add_command(
+            label="Тёмная",
+            command=lambda: theme_manager.set_theme('dark'),
+            accelerator="Ctrl+2"
+        )
+        theme_menu.add_command(
+            label="Синяя",
+            command=lambda: theme_manager.set_theme('blue'),
+            accelerator="Ctrl+3"
+        )
+        
+        view_menu.add_separator()
+        view_menu.add_command(
+            label="Обновить",
+            command=self.refresh_data,
+            accelerator="Ctrl+R"
+        )
+        
+        # Меню "Справка"
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Справка", menu=help_menu)
+        help_menu.add_command(
+            label="Горячие клавиши",
+            command=self.hotkey_manager.show_help_dialog,
+            accelerator="F1"
+        )
+        help_menu.add_command(
+            label="О программе",
+            command=self.show_about,
+            accelerator="Ctrl+F1"
+        )
 
     def create_toolbar(self):
         """Создание панели инструментов"""
@@ -206,6 +312,31 @@ class AdminToolsMainWindow(tk.Tk):
             
         self.status_label.config(text='Данные обновлены')
         return "Принудительное обновление данных выполнено"
+
+    def _setup_hotkeys(self):
+        """Настройка горячих клавиш"""
+        # Основные операции
+        self.hotkey_manager.register_callback('refresh', self.refresh_data)
+        self.hotkey_manager.register_callback('export', self.export_users)
+        self.hotkey_manager.register_callback('settings', self.show_settings)
+        
+        # Пользователи
+        self.hotkey_manager.register_callback('new_user', self.open_create_user)
+        self.hotkey_manager.register_callback('user_list', self.open_employee_list)
+        self.hotkey_manager.register_callback('edit_user', self.open_edit_user)
+        
+        # Группы
+        self.hotkey_manager.register_callback('groups', self.open_group_management)
+        
+        # Темы
+        self.hotkey_manager.register_callback('theme_light', lambda: theme_manager.set_theme('light'))
+        self.hotkey_manager.register_callback('theme_dark', lambda: theme_manager.set_theme('dark'))
+        self.hotkey_manager.register_callback('theme_blue', lambda: theme_manager.set_theme('blue'))
+        
+        # Служебные
+        self.hotkey_manager.register_callback('help', self.show_help)
+        self.hotkey_manager.register_callback('about', self.show_about)
+        self.hotkey_manager.register_callback('quit', self.quit_application)
 
     # Методы для открытия окон с декораторами обработки ошибок
     @handle_service_errors("открытие списка сотрудников")
@@ -320,3 +451,102 @@ class AdminToolsMainWindow(tk.Tk):
     def _delayed_init(self):
         """Отложенная инициализация после создания UI"""
         self._ui_initialized = True
+
+    def apply_theme(self):
+        """Применение текущей темы ко всем элементам"""
+        if not theme_manager.current_theme:
+            return
+            
+        theme = theme_manager.current_theme
+        
+        # Применяем к основному окну
+        self.config(bg=theme.get_color('background'))
+        
+        # Применяем к компонентам (если они созданы)
+        if hasattr(self, 'header_frame'):
+            self.header_frame.config(bg=theme.get_color('accent'))
+            
+        if hasattr(self, 'title_label'):
+            self.title_label.config(
+                bg=theme.get_color('accent'),
+                fg=theme.get_color('text_accent')
+            )
+            
+        if hasattr(self, 'status_frame'):
+            self.status_frame.config(bg=theme.get_color('secondary'))
+            
+        if hasattr(self, 'status_label'):
+            self.status_label.config(
+                bg=theme.get_color('secondary'),
+                fg=theme.get_color('text_primary')
+            )
+            
+        # Обновляем компоненты
+        if hasattr(self, 'statistics_panel') and self.statistics_panel:
+            self.statistics_panel.apply_theme()
+            
+        if hasattr(self, 'activity_log') and self.activity_log:
+            self.activity_log.apply_theme()
+            
+        if hasattr(self, 'toolbar') and self.toolbar:
+            # Если есть метод apply_theme у toolbar
+            if hasattr(self.toolbar, 'apply_theme'):
+                self.toolbar.apply_theme()
+
+    def on_theme_changed(self, theme):
+        """Обработчик изменения темы"""
+        self.apply_theme()
+        self.log_activity(f'Тема изменена на: {theme.name}', 'INFO')
+
+    def _load_theme_preferences(self):
+        """Загрузка настроек темы"""
+        import os
+        config_path = os.path.join(os.path.expanduser('~'), '.admin_tools_config.json')
+        theme_manager.load_theme_preference(config_path)
+
+    def _save_theme_preferences(self):
+        """Сохранение настроек темы"""
+        import os
+        config_path = os.path.join(os.path.expanduser('~'), '.admin_tools_config.json')
+        theme_manager.save_theme_preference(config_path)
+
+    def refresh_data(self):
+        """Обновление всех данных"""
+        self.load_statistics()
+        self.log_activity('Данные обновлены', 'INFO')
+
+    def show_settings(self):
+        """Показать окно настроек"""
+        messagebox.showinfo('Настройки', 'Окно настроек в разработке.\n\nИспользуйте:\n• Меню "Вид" → "Тема" для смены темы\n• F1 для справки по горячим клавишам')
+
+    def show_help(self):
+        """Показать справку"""
+        self.hotkey_manager.show_help_dialog()
+
+    def show_about(self):
+        """Показать информацию о программе"""
+        about_text = """Admin Team Tools v2.0.5
+
+Приложение для управления пользователями Google Workspace.
+
+🚀 Возможности:
+• Управление пользователями и группами
+• Экспорт данных в Excel
+• Система тем (светлая, тёмная, синяя)
+• Горячие клавиши для быстрой работы
+• Централизованное логирование
+
+⌨️ Горячие клавиши:
+• F1 - справка по всем клавишам
+• Ctrl+U - список пользователей
+• Ctrl+G - управление группами
+• Ctrl+E - экспорт данных
+• Ctrl+1/2/3 - смена темы
+
+© 2024 Admin Team Tools"""
+        messagebox.showinfo('О программе', about_text)
+
+    def quit_application(self):
+        """Корректный выход из приложения"""
+        self._save_theme_preferences()
+        self.destroy()
