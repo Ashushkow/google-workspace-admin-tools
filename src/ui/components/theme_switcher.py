@@ -3,7 +3,7 @@
 """
 import tkinter as tk
 from tkinter import ttk
-from ..themes.theme_manager import theme_manager
+from ...themes.theme_manager import theme_manager
 
 
 class ThemeSwitcher(tk.Frame):

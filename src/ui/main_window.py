@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any, Optional
 
 from .ui_components import ModernColors, ModernButton, StatusIndicator, center_window
-from .components import StatisticsPanel, ActivityLog, MainToolbar
+from .components import StatisticsPanel, ActivityLog, MainToolbar, ThemeSwitcher
 from .user_windows import CreateUserWindow, EditUserWindow
 from .employee_list_window import EmployeeListWindow
 from .additional_windows import AsanaInviteWindow, ErrorLogWindow
@@ -23,7 +23,6 @@ from ..utils.simple_utils import async_manager, error_handler, SimpleProgressDia
 from ..utils.ui_decorators import handle_service_errors, handle_ui_errors, log_operation, validate_email, measure_performance
 from ..themes.theme_manager import theme_manager
 from ..hotkeys.hotkey_manager import HotkeyManager
-from .components.theme_switcher import ThemeSwitcher
 
 
 class AdminToolsMainWindow(tk.Tk):
@@ -42,6 +41,11 @@ class AdminToolsMainWindow(tk.Tk):
         self.activity_log = None
         self.toolbar = None
         self.theme_switcher = None
+        self.status_indicator = None
+        self.status_label = None
+        self.header_frame = None
+        self.title_label = None
+        self.status_frame = None
         
         # Инициализация менеджеров
         self.hotkey_manager = HotkeyManager(self)
@@ -55,6 +59,9 @@ class AdminToolsMainWindow(tk.Tk):
         # Центрируем окно
         self.center_window()
         
+        # Создаем UI
+        self.setup_ui()
+        
         # Применяем тему и загружаем настройки
         self.apply_theme()
         self._load_theme_preferences()
@@ -64,6 +71,9 @@ class AdminToolsMainWindow(tk.Tk):
         
         # Настройка обработчика закрытия
         self.protocol("WM_DELETE_WINDOW", self.quit_application)
+        
+        # Отложенная инициализация
+        self.after(1000, self._delayed_init)
 
     def center_window(self):
         """Центрирует окно на экране"""
@@ -267,6 +277,10 @@ class AdminToolsMainWindow(tk.Tk):
 
     def check_service_status(self):
         """Проверка статуса подключения к Google API"""
+        # Проверяем, что UI инициализирован
+        if not self._ui_initialized or not hasattr(self, 'status_indicator') or not self.status_indicator:
+            return
+            
         if self.service:
             self.status_indicator.set_status('online')
             self.status_label.config(text='Подключен к Google Workspace API')
@@ -278,7 +292,7 @@ class AdminToolsMainWindow(tk.Tk):
 
     def load_statistics(self):
         """Загрузка статистики пользователей и групп"""
-        if not self.service or not self.statistics_panel:
+        if not self._ui_initialized or not self.service or not self.statistics_panel:
             return
             
         try:
@@ -289,7 +303,7 @@ class AdminToolsMainWindow(tk.Tk):
 
     def log_activity(self, message: str, level: str = 'INFO'):
         """Добавляет запись в журнал активности"""
-        if self.activity_log:
+        if self._ui_initialized and self.activity_log:
             self.activity_log.add_entry(message, level)
 
     def clear_log(self):
@@ -451,6 +465,12 @@ class AdminToolsMainWindow(tk.Tk):
     def _delayed_init(self):
         """Отложенная инициализация после создания UI"""
         self._ui_initialized = True
+        
+        # Теперь, когда UI создан, можем проверить статус сервиса
+        self.check_service_status()
+        
+        # Загружаем статистику
+        self.load_statistics()
 
     def apply_theme(self):
         """Применение текущей темы ко всем элементам"""
