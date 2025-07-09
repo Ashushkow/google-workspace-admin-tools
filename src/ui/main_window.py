@@ -20,6 +20,7 @@ from ..api.users_api import get_user_list
 from ..api.groups_api import list_groups
 from ..utils.data_cache import data_cache
 from ..utils.simple_utils import async_manager, error_handler, SimpleProgressDialog, show_api_error
+from ..utils.ui_decorators import handle_service_errors, handle_ui_errors, log_operation, validate_email, measure_performance
 
 
 class AdminToolsMainWindow(tk.Tk):
@@ -190,58 +191,37 @@ class AdminToolsMainWindow(tk.Tk):
         if self.activity_log:
             self.activity_log.clear_log()
 
+    @handle_ui_errors("обновление данных", show_success=True)
     def refresh_data(self):
         """Принудительное обновление всех данных"""
         if not self.service:
             messagebox.showwarning('Предупреждение', 'Нет подключения к Google API')
             return
             
-        try:
-            self.status_label.config(text='Обновление данных...')
-            data_cache.clear_cache()
+        self.status_label.config(text='Обновление данных...')
+        data_cache.clear_cache()
+        
+        if self.statistics_panel:
+            self.statistics_panel.refresh()
             
-            if self.statistics_panel:
-                self.statistics_panel.refresh()
-                
-            self.status_label.config(text='Данные обновлены')
-            self.log_activity('Принудительное обновление данных выполнено')
-        except Exception as e:
-            self.log_activity(f'Ошибка обновления данных: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Ошибка обновления данных: {str(e)}')
+        self.status_label.config(text='Данные обновлены')
+        return "Принудительное обновление данных выполнено"
 
-    # Методы для открытия окон
+    # Методы для открытия окон с декораторами обработки ошибок
+    @handle_service_errors("открытие списка сотрудников")
     def open_employee_list(self):
         """Открытие окна списка сотрудников"""
-        if not self.service:
-            messagebox.showwarning('Предупреждение', 'Нет подключения к Google API')
-            return
-            
-        try:
-            window = EmployeeListWindow(self, self.service)
-            self.log_activity('Открыто окно списка сотрудников')
-        except Exception as e:
-            self.log_activity(f'Ошибка открытия списка сотрудников: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Не удалось открыть список сотрудников: {str(e)}')
+        window = EmployeeListWindow(self, self.service)
 
+    @handle_service_errors("открытие окна создания пользователя")
     def open_create_user(self):
         """Открытие окна создания пользователя"""
-        if not self.service:
-            messagebox.showwarning('Предупреждение', 'Нет подключения к Google API')
-            return
-            
-        try:
-            window = CreateUserWindow(self, self.service)
-            self.log_activity('Открыто окно создания пользователя')
-        except Exception as e:
-            self.log_activity(f'Ошибка открытия окна создания пользователя: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Не удалось открыть окно создания пользователя: {str(e)}')
+        window = CreateUserWindow(self, self.service)
 
+    @handle_service_errors("открытие окна редактирования пользователя")
+    @validate_email
     def open_edit_user(self):
         """Открытие окна редактирования пользователя"""
-        if not self.service:
-            messagebox.showwarning('Предупреждение', 'Нет подключения к Google API')
-            return
-            
         # Запрашиваем email пользователя
         user_email = simpledialog.askstring(
             'Редактирование пользователя',
@@ -249,83 +229,56 @@ class AdminToolsMainWindow(tk.Tk):
         )
         
         if user_email:
-            try:
-                window = EditUserWindow(self, self.service, user_email)
-                self.log_activity(f'Открыто окно редактирования пользователя: {user_email}')
-            except Exception as e:
-                self.log_activity(f'Ошибка открытия окна редактирования: {str(e)}', 'ERROR')
-                messagebox.showerror('Ошибка', f'Не удалось открыть окно редактирования: {str(e)}')
+            window = EditUserWindow(self, self.service, user_email)
+            return f"Открыто окно редактирования пользователя: {user_email}"
 
+    @handle_service_errors("открытие окна управления группами")
     def open_group_management(self):
         """Открытие окна управления группами"""
-        if not self.service:
-            messagebox.showwarning('Предупреждение', 'Нет подключения к Google API')
-            return
-            
-        try:
-            window = GroupManagementWindow(self, self.service)
-            self.log_activity('Открыто окно управления группами')
-        except Exception as e:
-            self.log_activity(f'Ошибка открытия окна управления группами: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Не удалось открыть окно управления группами: {str(e)}')
+        window = GroupManagementWindow(self, self.service)
 
+    @handle_ui_errors("открытие окна приглашения в Asana")
     def open_asana_invite(self):
         """Открытие окна приглашения в Asana"""
-        try:
-            window = AsanaInviteWindow(self)
-            self.log_activity('Открыто окно приглашения в Asana')
-        except Exception as e:
-            self.log_activity(f'Ошибка открытия окна Asana: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Не удалось открыть окно Asana: {str(e)}')
+        window = AsanaInviteWindow(self)
 
+    @handle_ui_errors("открытие окна журнала ошибок")
     def open_error_log(self):
         """Открытие окна журнала ошибок"""
-        try:
-            window = ErrorLogWindow(self)
-            self.log_activity('Открыто окно журнала ошибок')
-        except Exception as e:
-            self.log_activity(f'Ошибка открытия журнала ошибок: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Не удалось открыть журнал ошибок: {str(e)}')
+        window = ErrorLogWindow(self)
 
+    @handle_service_errors("экспорт списка пользователей", True)
+    @measure_performance
     def export_users(self):
         """Экспорт списка пользователей в файл"""
-        if not self.service:
-            messagebox.showwarning('Предупреждение', 'Нет подключения к Google API')
-            return
+        # Выбираем файл для сохранения
+        filename = filedialog.asksaveasfilename(
+            defaultextension='.csv',
+            filetypes=[('CSV files', '*.csv'), ('All files', '*.*')],
+            title='Сохранить список пользователей'
+        )
+        
+        if filename:
+            users = get_user_list(self.service)
             
-        try:
-            # Выбираем файл для сохранения
-            filename = filedialog.asksaveasfilename(
-                defaultextension='.csv',
-                filetypes=[('CSV files', '*.csv'), ('All files', '*.*')],
-                title='Сохранить список пользователей'
-            )
-            
-            if filename:
-                users = get_user_list(self.service)
+            with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(['Email', 'Имя', 'Фамилия', 'Организация', 'Статус'])
                 
-                with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
-                    writer = csv.writer(csvfile)
-                    writer.writerow(['Email', 'Имя', 'Фамилия', 'Организация', 'Статус'])
+                for user in users:
+                    name = user.get('name', {})
+                    org_info = user.get('organizations', [{}])[0] if user.get('organizations') else {}
                     
-                    for user in users:
-                        name = user.get('name', {})
-                        org_info = user.get('organizations', [{}])[0] if user.get('organizations') else {}
-                        
-                        writer.writerow([
-                            user.get('primaryEmail', ''),
-                            name.get('givenName', ''),
-                            name.get('familyName', ''),
-                            org_info.get('title', ''),
-                            'Активен' if not user.get('suspended', False) else 'Заблокирован'
-                        ])
-                
-                self.log_activity(f'Экспорт пользователей завершен: {filename}')
-                messagebox.showinfo('Успех', f'Список пользователей сохранен в {filename}')
-                
-        except Exception as e:
-            self.log_activity(f'Ошибка экспорта пользователей: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Ошибка экспорта: {str(e)}')
+                    writer.writerow([
+                        user.get('primaryEmail', ''),
+                        name.get('givenName', ''),
+                        name.get('familyName', ''),
+                        org_info.get('title', ''),
+                        'Активен' if not user.get('suspended', False) else 'Заблокирован'
+                    ])
+            
+            messagebox.showinfo('Успех', f'Список пользователей сохранен в {filename}')
+            return f"Экспорт пользователей завершен: {filename}"
 
     def load_statistics_async(self):
         """Асинхронная загрузка статистики"""
@@ -363,7 +316,7 @@ class AdminToolsMainWindow(tk.Tk):
         
         async_manager.run_async(load_data, on_success, on_error)
 
+    @log_operation("Приложение готово к работе", "SUCCESS")
     def _delayed_init(self):
         """Отложенная инициализация после создания UI"""
         self._ui_initialized = True
-        self.log_activity('Приложение готово к работе')
