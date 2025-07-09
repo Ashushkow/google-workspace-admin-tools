@@ -11,7 +11,8 @@ from typing import Dict, Any
 SCOPES = [
     'https://www.googleapis.com/auth/admin.directory.user',
     'https://www.googleapis.com/auth/admin.directory.group',
-    'https://www.googleapis.com/auth/admin.directory.orgunit'
+    'https://www.googleapis.com/auth/admin.directory.orgunit',
+    'https://www.googleapis.com/auth/calendar'
 ]
 CREDENTIALS_FILE = 'credentials.json'
 TOKEN_PICKLE = 'token.pickle'

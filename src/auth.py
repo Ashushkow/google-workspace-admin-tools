@@ -16,9 +16,9 @@ def get_service() -> Any:
     """
     Получение авторизованного сервиса Google Directory API.
     
-    Использует сохранённый токен, если он валиден, иначе инициирует 
-    процесс аутентификации. Всегда сохраняет новый токен после 
-    успешной аутентификации.
+    Использует OAuth 2.0 для аутентификации. При первом запуске откроет
+    браузер для авторизации. Последующие запуски будут использовать
+    сохранённый токен.
     
     Returns:
         Авторизованный сервис Google Directory API
@@ -37,11 +37,22 @@ def get_service() -> Any:
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             # Обновляем истёкший токен
-            creds.refresh(Request())
-        else:
-            # Инициируем новую авторизацию
+            try:
+                creds.refresh(Request())
+            except Exception:
+                # Если обновление не удалось, удаляем старый токен
+                if os.path.exists(TOKEN_PICKLE):
+                    os.remove(TOKEN_PICKLE)
+                creds = None
+        
+        # Если токена нет или он не обновился, запускаем новую авторизацию
+        if not creds or not creds.valid:
             if not os.path.exists(CREDENTIALS_FILE):
-                raise FileNotFoundError(f"Файл {CREDENTIALS_FILE} не найден.")
+                raise FileNotFoundError(
+                    f"Файл {CREDENTIALS_FILE} не найден.\n"
+                    "Создайте OAuth 2.0 credentials в Google Cloud Console и "
+                    "скачайте credentials.json в корневую папку проекта."
+                )
             
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
             creds = flow.run_local_server(port=0)

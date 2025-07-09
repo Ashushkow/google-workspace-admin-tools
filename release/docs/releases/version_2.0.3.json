@@ -1,0 +1,55 @@
+{
+  "version": "2.0.3",
+  "release_date": "2025-07-08",
+  "release_name": "Организованная структура и исправления",
+  "major_changes": [
+    "Организация файлов по логическим папкам",
+    "Исправление импортов после реорганизации",
+    "Профессиональная структура проекта",
+    "Стабильная работа после изменений"
+  ],
+  "folder_structure": {
+    "src": {
+      "description": "Исходный код приложения",
+      "subfolders": ["api", "ui", "utils"]
+    },
+    "docs": {
+      "description": "Документация проекта",
+      "subfolders": ["releases"]
+    },
+    "config": {
+      "description": "Конфигурационные файлы"
+    },
+    "tests": {
+      "description": "Тесты приложения"
+    },
+    "scripts": {
+      "description": "Служебные скрипты"
+    },
+    "backup": {
+      "description": "Резервные копии"
+    }
+  },
+  "fixed_imports": [
+    "src/ui/main_window.py",
+    "src/ui/user_windows.py", 
+    "src/ui/additional_windows.py",
+    "src/ui/employee_list_window.py",
+    "src/ui/group_management.py",
+    "src/api/users_api.py",
+    "src/api/groups_api.py"
+  ],
+  "statistics": {
+    "main_py_lines": 48,
+    "total_modules": 13,
+    "folders_organized": 6,
+    "files_moved": "50+"
+  },
+  "previous_versions": {
+    "2.0.2": "Модульная архитектура",
+    "2.0.1": "Исправления фильтрации", 
+    "2.0.0": "Оптимизированная версия"
+  },
+  "compatibility": "Полная обратная совместимость",
+  "status": "Готова к использованию"
+}
