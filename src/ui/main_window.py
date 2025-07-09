@@ -12,7 +12,7 @@ from typing import Any, Optional
 from .ui_components import ModernColors, ModernButton, StatusIndicator, center_window
 from .user_windows import CreateUserWindow, EditUserWindow
 from .employee_list_window import EmployeeListWindow
-from .additional_windows import AsanaInviteWindow, AddToGroupWindow, ErrorLogWindow
+from .additional_windows import AsanaInviteWindow, ErrorLogWindow
 from .group_management import GroupManagementWindow
 from ..api.users_api import get_user_list
 from ..api.groups_api import list_groups
@@ -151,14 +151,6 @@ class AdminToolsMainWindow(tk.Tk):
             text='� Группы',
             command=self.open_group_management,
             style='info',
-            font=('Arial', 9)
-        ).pack(side='left', padx=(0, 8))
-        
-        ModernButton(
-            bottom_buttons_frame,
-            text='� В группу',
-            command=self.open_add_to_group,
-            style='secondary',
             font=('Arial', 9)
         ).pack(side='left', padx=(0, 8))
 
@@ -410,19 +402,6 @@ class AdminToolsMainWindow(tk.Tk):
         except Exception as e:
             self.log_activity(f'Ошибка открытия окна управления группами: {str(e)}', 'ERROR')
             messagebox.showerror('Ошибка', f'Не удалось открыть окно управления группами: {str(e)}')
-
-    def open_add_to_group(self):
-        """Открытие окна добавления в группу"""
-        if not self.service:
-            messagebox.showwarning('Предупреждение', 'Нет подключения к Google API')
-            return
-            
-        try:
-            window = AddToGroupWindow(self, self.service)
-            self.log_activity('Открыто окно добавления в группу')
-        except Exception as e:
-            self.log_activity(f'Ошибка открытия окна добавления в группу: {str(e)}', 'ERROR')
-            messagebox.showerror('Ошибка', f'Не удалось открыть окно добавления в группу: {str(e)}')
 
     def open_asana_invite(self):
         """Открытие окна приглашения в Asana"""
