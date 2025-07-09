@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 """
 Основное окно приложения Admin Team Tools.
+Рефакторированная версия с разделенными компонентами.
 """
 
 import tkinter as tk
-from tkinter import messagebox, scrolledtext, ttk, simpledialog, filedialog
+from tkinter import messagebox, simpledialog, filedialog
 import csv
 from datetime import datetime
 from typing import Any, Optional
 
 from .ui_components import ModernColors, ModernButton, StatusIndicator, center_window
+from .components import StatisticsPanel, ActivityLog, MainToolbar
 from .user_windows import CreateUserWindow, EditUserWindow
 from .employee_list_window import EmployeeListWindow
 from .additional_windows import AsanaInviteWindow, ErrorLogWindow
@@ -23,13 +25,18 @@ from ..utils.simple_utils import async_manager, error_handler, SimpleProgressDia
 class AdminToolsMainWindow(tk.Tk):
     """
     Главное окно приложения Admin Team Tools.
-    Предоставляет интерфейс для управления пользователями Google Workspace.
+    Рефакторированная версия с разделенными компонентами.
     """
     
     def __init__(self, service=None):
         super().__init__()
         self.service = service
         self._ui_initialized = False
+        
+        # Компоненты UI
+        self.statistics_panel = None
+        self.activity_log = None
+        self.toolbar = None
         
         # Настройка главного окна
         self.title('Admin Team Tools v2.0 - Управление пользователями Google Workspace')
@@ -100,166 +107,35 @@ class AdminToolsMainWindow(tk.Tk):
 
     def create_toolbar(self):
         """Создание панели инструментов"""
-        toolbar_frame = tk.Frame(self, bg=ModernColors.BACKGROUND, height=80)
-        toolbar_frame.pack(fill='x', padx=15, pady=(5, 0))
-        toolbar_frame.pack_propagate(False)
+        toolbar_callbacks = {
+            'employee_list': self.open_employee_list,
+            'create_user': self.open_create_user,
+            'edit_user': self.open_edit_user,
+            'groups': self.open_group_management,
+            'asana': self.open_asana_invite
+        }
         
-        # Первая строка кнопок
-        top_buttons_frame = tk.Frame(toolbar_frame, bg=ModernColors.BACKGROUND)
-        top_buttons_frame.pack(fill='x', pady=(0, 5))
-        
-        # Основные действия
-        ModernButton(
-            top_buttons_frame,
-            text='👥 Сотрудники',
-            command=self.open_employee_list,
-            style='primary',
-            font=('Arial', 9)
-        ).pack(side='left', padx=(0, 8))
-        
-        ModernButton(
-            top_buttons_frame,
-            text='➕ Создать',
-            command=self.open_create_user,
-            style='success',
-            font=('Arial', 9)
-        ).pack(side='left', padx=(0, 8))
-        
-        ModernButton(
-            top_buttons_frame,
-            text='✏️ Редактировать',
-            command=self.open_edit_user,
-            style='secondary',
-            font=('Arial', 9)
-        ).pack(side='left', padx=(0, 8))
-        
-        ModernButton(
-            top_buttons_frame,
-            text='� Asana',
-            command=self.open_asana_invite,
-            style='warning',
-            font=('Arial', 9)
-        ).pack(side='right', padx=(8, 0))
-        
-        # Вторая строка кнопок
-        bottom_buttons_frame = tk.Frame(toolbar_frame, bg=ModernColors.BACKGROUND)
-        bottom_buttons_frame.pack(fill='x')
-        
-        # Группы
-        ModernButton(
-            bottom_buttons_frame,
-            text='� Группы',
-            command=self.open_group_management,
-            style='info',
-            font=('Arial', 9)
-        ).pack(side='left', padx=(0, 8))
+        self.toolbar = MainToolbar(self, toolbar_callbacks)
 
     def create_main_area(self):
         """Создание основной рабочей области"""
         main_frame = tk.Frame(self, bg=ModernColors.BACKGROUND)
         main_frame.pack(fill='both', expand=True, padx=15, pady=5)
         
-        # Левая панель - статистика и быстрые действия (сделаем уже)
-        left_panel = tk.Frame(main_frame, bg=ModernColors.CARD_BG, relief='solid', bd=1)
-        left_panel.pack(side='left', fill='y', padx=(0, 8), pady=0, ipadx=10, ipady=10)
+        # Левая панель - статистика и быстрые действия
+        quick_actions_callbacks = {
+            'export': self.export_users,
+            'error_log': self.open_error_log
+        }
         
-        # Заголовок панели
-        tk.Label(
-            left_panel,
-            text='📊 Статистика',
-            font=('Arial', 12, 'bold'),
-            bg=ModernColors.CARD_BG,
-            fg=ModernColors.TEXT_PRIMARY
-        ).pack(anchor='w', pady=(0, 10))
-        
-        # Статистические карточки
-        self.stats_frame = tk.Frame(left_panel, bg=ModernColors.CARD_BG)
-        self.stats_frame.pack(fill='x', pady=(0, 15))
-        
-        self.total_users_label = tk.Label(
-            self.stats_frame,
-            text='Пользователи: загрузка...',
-            font=('Arial', 10),
-            bg=ModernColors.CARD_BG,
-            fg=ModernColors.TEXT_SECONDARY
+        self.statistics_panel = StatisticsPanel(
+            main_frame, 
+            self.service, 
+            quick_actions_callbacks
         )
-        self.total_users_label.pack(anchor='w', pady=1)
-        
-        self.total_groups_label = tk.Label(
-            self.stats_frame,
-            text='Группы: загрузка...',
-            font=('Arial', 10),
-            bg=ModernColors.CARD_BG,
-            fg=ModernColors.TEXT_SECONDARY
-        )
-        self.total_groups_label.pack(anchor='w', pady=1)
-        
-        # Быстрые действия
-        tk.Label(
-            left_panel,
-            text='⚡ Действия',
-            font=('Arial', 12, 'bold'),
-            bg=ModernColors.CARD_BG,
-            fg=ModernColors.TEXT_PRIMARY
-        ).pack(anchor='w', pady=(10, 8))
-        
-        quick_actions_frame = tk.Frame(left_panel, bg=ModernColors.CARD_BG)
-        quick_actions_frame.pack(fill='x')
-        
-        ModernButton(
-            quick_actions_frame,
-            text='📋 Экспорт',
-            command=self.export_users,
-            style='secondary',
-            font=('Arial', 9)
-        ).pack(fill='x', pady=1)
-        
-        ModernButton(
-            quick_actions_frame,
-            text='📁 Журнал',
-            command=self.open_error_log,
-            style='secondary',
-            font=('Arial', 9)
-        ).pack(fill='x', pady=1)
         
         # Правая панель - журнал активности
-        right_panel = tk.Frame(main_frame, bg=ModernColors.CARD_BG, relief='solid', bd=1)
-        right_panel.pack(side='right', fill='both', expand=True, padx=0, pady=0)
-        
-        # Заголовок журнала
-        log_header = tk.Frame(right_panel, bg=ModernColors.CARD_BG)
-        log_header.pack(fill='x', padx=10, pady=(10, 8))
-        
-        tk.Label(
-            log_header,
-            text='📝 Журнал активности',
-            font=('Arial', 12, 'bold'),
-            bg=ModernColors.CARD_BG,
-            fg=ModernColors.TEXT_PRIMARY
-        ).pack(side='left')
-        
-        ModernButton(
-            log_header,
-            text='🗑️ Очистить',
-            command=self.clear_log,
-            style='secondary',
-            font=('Arial', 9)
-        ).pack(side='right')
-        
-        # Текстовое поле журнала
-        log_frame = tk.Frame(right_panel, bg=ModernColors.CARD_BG)
-        log_frame.pack(fill='both', expand=True, padx=10, pady=(0, 10))
-        
-        self.log_text = scrolledtext.ScrolledText(
-            log_frame,
-            wrap=tk.WORD,
-            font=('Consolas', 9),
-            bg='white',
-            fg=ModernColors.TEXT_PRIMARY,
-            relief='solid',
-            bd=1
-        )
-        self.log_text.pack(fill='both', expand=True)
+        self.activity_log = ActivityLog(main_frame)
         
         # Загружаем начальную статистику асинхронно (с задержкой)
         self.after(2000, self.load_statistics_async)
@@ -295,37 +171,24 @@ class AdminToolsMainWindow(tk.Tk):
 
     def load_statistics(self):
         """Загрузка статистики пользователей и групп"""
-        if not self.service:
+        if not self.service or not self.statistics_panel:
             return
             
         try:
-            # Загружаем пользователей
-            users = get_user_list(self.service)
-            users_count = len(users)
-            self.total_users_label.config(text=f'Пользователи: {users_count}')
-            
-            # Загружаем группы
-            groups = list_groups(self.service)
-            groups_count = len(groups)
-            self.total_groups_label.config(text=f'Группы: {groups_count}')
-            
+            users_count, groups_count = self.statistics_panel.load_statistics()
             self.log_activity(f'Статистика обновлена: {users_count} пользователей, {groups_count} групп')
-            
         except Exception as e:
             self.log_activity(f'Ошибка загрузки статистики: {str(e)}', 'ERROR')
 
     def log_activity(self, message: str, level: str = 'INFO'):
         """Добавляет запись в журнал активности"""
-        timestamp = datetime.now().strftime('%H:%M:%S')
-        log_entry = f'[{timestamp}] {level}: {message}\n'
-        
-        self.log_text.insert(tk.END, log_entry)
-        self.log_text.see(tk.END)
+        if self.activity_log:
+            self.activity_log.add_entry(message, level)
 
     def clear_log(self):
         """Очистка журнала активности"""
-        self.log_text.delete(1.0, tk.END)
-        self.log_activity('Журнал активности очищен')
+        if self.activity_log:
+            self.activity_log.clear_log()
 
     def refresh_data(self):
         """Принудительное обновление всех данных"""
@@ -336,7 +199,10 @@ class AdminToolsMainWindow(tk.Tk):
         try:
             self.status_label.config(text='Обновление данных...')
             data_cache.clear_cache()
-            self.load_statistics()
+            
+            if self.statistics_panel:
+                self.statistics_panel.refresh()
+                
             self.status_label.config(text='Данные обновлены')
             self.log_activity('Принудительное обновление данных выполнено')
         except Exception as e:
@@ -463,7 +329,7 @@ class AdminToolsMainWindow(tk.Tk):
 
     def load_statistics_async(self):
         """Асинхронная загрузка статистики"""
-        if not self._ui_initialized or not hasattr(self, 'total_users_label'):
+        if not self._ui_initialized or not self.statistics_panel:
             # Если UI не готов, отложим загрузку
             self.after(500, self.load_statistics_async)
             return
@@ -477,15 +343,14 @@ class AdminToolsMainWindow(tk.Tk):
             return users, groups
         
         def on_success(result):
-            if not hasattr(self, 'total_users_label'):
+            if not self.statistics_panel:
                 return
                 
             users, groups = result
             if users is not None and groups is not None:
                 users_count = len(users)
                 groups_count = len(groups)
-                self.total_users_label.config(text=f'Пользователи: {users_count}')
-                self.total_groups_label.config(text=f'Группы: {groups_count}')
+                self.statistics_panel.update_statistics(users_count, groups_count)
                 self.log_activity(f'Статистика обновлена: {users_count} пользователей, {groups_count} групп')
         
         def on_error(error):
