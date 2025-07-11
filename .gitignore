@@ -28,6 +28,13 @@ downloads/
 eggs/
 .eggs/
 lib/
+
+# 📁 Папки сборки и кэша
+build/
+htmlcov/
+.pytest_cache/
+.coverage
+coverage.xml
 lib64/
 parts/
 sdist/

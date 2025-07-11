@@ -5,6 +5,10 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from pathlib import Path
+
+# Добавляем корневую папку в путь для импорта
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 import pickle
 import json
 

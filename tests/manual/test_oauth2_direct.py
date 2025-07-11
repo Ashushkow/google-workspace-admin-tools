@@ -10,6 +10,10 @@ import logging
 import asyncio
 from pathlib import Path
 
+# Добавляем корневую папку в путь для импорта
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+
 # Добавляем src в Python path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
