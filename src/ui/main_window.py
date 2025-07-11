@@ -16,7 +16,9 @@ from .user_windows import CreateUserWindow, EditUserWindow
 from .employee_list_window import EmployeeListWindow
 from .additional_windows import AsanaInviteWindow, ErrorLogWindow
 from .group_management import GroupManagementWindow
+from .calendar_management import open_calendar_management
 from ..api.users_api import get_user_list
+from ..api.service_adapter import ServiceAdapter
 from ..api.groups_api import list_groups
 from ..utils.data_cache import data_cache
 from ..utils.simple_utils import async_manager, error_handler, SimpleProgressDialog, show_api_error
@@ -178,6 +180,15 @@ class AdminToolsMainWindow(tk.Tk):
             accelerator="Ctrl+G"
         )
         
+        # Меню "Календари"
+        calendars_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Календари", menu=calendars_menu)
+        calendars_menu.add_command(
+            label="Управление календарями",
+            command=self.open_calendar_management,
+            accelerator="Ctrl+Shift+C"
+        )
+        
         # Меню "Вид"
         view_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Вид", menu=view_menu)
@@ -229,6 +240,7 @@ class AdminToolsMainWindow(tk.Tk):
             'create_user': self.open_create_user,
             'edit_user': self.open_edit_user,
             'groups': self.open_group_management,
+            'calendars': self.open_calendar_management,
             'asana': self.open_asana_invite
         }
         
@@ -342,6 +354,9 @@ class AdminToolsMainWindow(tk.Tk):
         # Группы
         self.hotkey_manager.register_callback('groups', self.open_group_management)
         
+        # Календари
+        self.hotkey_manager.register_callback('calendars', self.open_calendar_management)
+        
         # Темы
         self.hotkey_manager.register_callback('theme_light', lambda: theme_manager.set_theme('light'))
         self.hotkey_manager.register_callback('theme_dark', lambda: theme_manager.set_theme('dark'))
@@ -381,6 +396,11 @@ class AdminToolsMainWindow(tk.Tk):
     def open_group_management(self):
         """Открытие окна управления группами"""
         window = GroupManagementWindow(self, self.service)
+
+    @handle_ui_errors("открытие окна управления календарями")
+    def open_calendar_management(self):
+        """Открытие окна управления календарями"""
+        window = open_calendar_management(self, self.service)
 
     @handle_ui_errors("открытие окна приглашения в Asana")
     def open_asana_invite(self):

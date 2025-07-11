@@ -151,5 +151,5 @@ python main.py
 Если у вас возникли проблемы:
 
 1. Проверьте [FAQ](FAQ.md)
-2. Создайте [Issue](https://github.com/yourusername/admin-team-tools/issues)
-3. Обратитесь в [Discussions](https://github.com/yourusername/admin-team-tools/discussions)
+2. Создайте [Issue](https://github.com/Ashushkow/admin-team-tools/issues)
+3. Обратитесь в [Discussions](https://github.com/Ashushkow/admin-team-tools/discussions)

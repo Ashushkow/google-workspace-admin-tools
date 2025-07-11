@@ -26,21 +26,29 @@ def check_credentials_file():
         with open('credentials.json', 'r') as f:
             creds = json.load(f)
             
-        if 'installed' in creds:
+        if creds.get('type') == 'service_account':
+            print("✅ credentials.json найден (Service Account)")
+            client_email = creds.get('client_email', '')
+            if client_email:
+                print(f"📧 Service Account: {client_email}")
+                print("⚠️  Убедитесь, что Service Account имеет права Domain-wide delegation")
+                return True
+            else:
+                print("❌ Service Account не содержит client_email")
+                return False
+                
+        elif 'installed' in creds:
             client_id = creds['installed'].get('client_id', '')
-            if 'YOUR_CLIENT_ID' in client_id or 'YOUR_OAUTH_CLIENT_ID' in client_id:
+            if 'YOUR_CLIENT_ID' in client_id:
                 print("❌ credentials.json содержит тестовые данные")
                 print("📋 Замените содержимое на данные из Google Cloud Console")
                 return False
             else:
                 print("✅ credentials.json найден (OAuth 2.0)")
-                print(f"🔑 Client ID: {client_id[:20]}...")
                 return True
         else:
             print("❌ Неверный формат credentials.json")
-            print("📋 Необходим OAuth 2.0 credentials (тип 'Desktop application')")
-            print("💡 Создайте новый в Google Cloud Console:")
-            print("   APIs & Services → Credentials → Create → OAuth 2.0 Client ID")
+            print("📋 Поддерживаются только Service Account и OAuth 2.0 credentials")
             return False
             
     except json.JSONDecodeError:

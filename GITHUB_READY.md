@@ -135,7 +135,7 @@ admin-team-tools/
 
 ```bash
 # 1. Клонировать репозиторий
-git clone https://github.com/yourusername/admin-team-tools.git
+git clone https://github.com/Ashushkow/admin-team-tools.git
 cd admin-team-tools
 
 # 2. Создать виртуальное окружение

@@ -81,6 +81,14 @@ class MainToolbar(tk.Frame):
             font=('Arial', 9)
         ).pack(side='left', padx=(0, 8))
         
+        ModernButton(
+            bottom_buttons_frame,
+            text='📅 Календари',
+            command=self.callbacks.get('calendars', self._no_callback),
+            style='primary',
+            font=('Arial', 9)
+        ).pack(side='left', padx=(0, 8))
+        
     def _no_callback(self):
         """Заглушка для отсутствующих callback'ов"""
         pass

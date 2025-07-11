@@ -7,15 +7,13 @@ token.pickle
 config/credentials.json
 config/token.pickle
 
-# 📦 PyInstaller
-build/
-dist/
-*.spec
-*.exe
-
-# 🚀 Релизные файлы будут в Git
-!release/
-!release/*.exe
+# 🔄 Резервные и временные файлы
+*_old.*
+*_backup.*
+*.bak
+*_temp.*
+main_old.py
+README_old.md
 
 # 🐍 Python
 __pycache__/

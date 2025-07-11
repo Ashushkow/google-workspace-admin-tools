@@ -30,7 +30,7 @@
 
 ```bash
 # Добавляем remote для GitHub
-git remote add origin https://github.com/YOURUSERNAME/admin-team-tools.git
+git remote add origin https://github.com/Ashushkow/admin-team-tools.git
 
 # Отправляем все ветки
 git push -u origin master

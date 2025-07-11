@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from .ui_components import ModernColors, ModernButton, center_window
 from ..api.groups_api import list_groups, add_user_to_group
-from ..config import load_settings
+from ..config.enhanced_config import config
 
 
 class AsanaInviteWindow(tk.Toplevel):
@@ -79,7 +79,7 @@ class AsanaInviteWindow(tk.Toplevel):
             return
         
         # Получаем настройки Asana из конфигурации
-        settings = load_settings()
+        settings = config.settings
         asana_token = settings.get('asana_token', 
                                   '2/1204610324552816/1210701765324768:d0419d24cf3e05b6479dd294cec6fd8a')
         workspace_name = settings.get('asana_workspace', 'sputnik8.com')

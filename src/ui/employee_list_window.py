@@ -244,25 +244,35 @@ class EmployeeListWindow(tk.Toplevel):
                 users = get_user_list(self.service)
                 
                 employees = []
-                for user in users:
-                    # Более надежное извлечение данных
-                    name_info = user.get('name', {})
-                    full_name = name_info.get('fullName', '') if isinstance(name_info, dict) else ''
-                    
-                    creation_time = user.get('creationTime', '')
-                    if creation_time and len(creation_time) > 10:
-                        creation_date = creation_time[:10]  # Берем только дату
-                    else:
-                        creation_date = ''
-                    
-                    employee = {
-                        'email': user.get('primaryEmail', ''),
-                        'name': full_name,
-                        'status': 'Suspended' if user.get('suspended', False) else 'Active',
-                        'orgunit': user.get('orgUnitPath', '/'),  # По умолчанию корневое подразделение
-                        'created': creation_date
-                    }
-                    employees.append(employee)
+                for i, user in enumerate(users):
+                    try:
+                        # Отладочная информация только для проблемных случаев
+                        user_email = user.get('primaryEmail', 'unknown')
+                        
+                        # Более надежное извлечение данных
+                        name_info = user.get('name', {})
+                        full_name = name_info.get('fullName', '') if isinstance(name_info, dict) else ''
+                        
+                        creation_time = user.get('creationTime', '')
+                        if creation_time and len(creation_time) > 10:
+                            creation_date = creation_time[:10]  # Берем только дату
+                        else:
+                            creation_date = ''
+                        
+                        employee = {
+                            'email': user_email,
+                            'name': full_name,
+                            'status': 'Suspended' if user.get('suspended', False) else 'Active',
+                            'orgunit': user.get('orgUnitPath', '/'),  # По умолчанию корневое подразделение
+                            'created': creation_date
+                        }
+                        employees.append(employee)
+                        
+                    except Exception as user_error:
+                        user_email = user.get('primaryEmail', 'unknown')
+                        print(f"Ошибка обработки пользователя {user_email}: {user_error}")
+                        # Продолжаем обработку следующего пользователя
+                        continue
                 
                 # Используем after вместо after_idle для более надежного обновления UI
                 self.after(100, self._update_ui_with_data, employees)
@@ -300,39 +310,45 @@ class EmployeeListWindow(tk.Toplevel):
     def display_employees(self, employees: List[Dict]):
         """Отображает сотрудников в Treeview с оптимизацией"""
         try:
-            print(f"DEBUG: display_employees вызван с {len(employees)} записями")
             # Очищаем существующие записи
-            print("DEBUG: Очистка таблицы перед добавлением новых записей")
             for row in self.tree.get_children():
                 self.tree.delete(row)
             
-            # Добавляем новые записи батчами для лучшей производительности
-            batch_size = 100
+            # Добавляем записи меньшими батчами для лучшей отзывчивости UI
+            batch_size = 50  # Уменьшили размер батча
+            total_added = 0
+            
             for i in range(0, len(employees), batch_size):
                 batch = employees[i:i + batch_size]
                 for emp in batch:
-                    print(f"DEBUG: Добавление записи в таблицу: {emp}")
-                    self.tree.insert('', 'end', values=(
-                        emp.get('email', ''), 
-                        emp.get('name', ''), 
-                        emp.get('status', ''), 
-                        emp.get('orgunit', ''), 
-                        emp.get('created', '')
-                    ))
+                    try:
+                        self.tree.insert('', 'end', values=(
+                            emp.get('email', ''), 
+                            emp.get('name', ''), 
+                            emp.get('status', ''), 
+                            emp.get('orgunit', ''), 
+                            emp.get('created', '')
+                        ))
+                        total_added += 1
+                    except Exception as row_error:
+                        # Логируем ошибку, но продолжаем
+                        print(f"Ошибка добавления записи {emp.get('email', 'unknown')}: {row_error}")
+                        continue
                 
+                # Обновляем UI после каждого батча
                 self.update_idletasks()
-                print("DEBUG: UI обновлен после добавления записей")
-                # Удаляем всплывающее окно, оставляем только обновление UI
-                self.total_label.config(text=f"📊 Показано: {len(employees)} из {total_employees}")
-                self.update_idletasks()
-                print("DEBUG: UI обновлен после добавления записей")
+                
+                # Обновляем счетчик прогресса
+                if hasattr(self, 'total_label'):
+                    total_employees = len(self.all_employees) if hasattr(self, 'all_employees') else 0
+                    self.total_label.config(text=f"📊 Загружено: {total_added}/{len(employees)} из {total_employees}")
+                    self.update_idletasks()
             
-            # Обновляем счетчик
+            # Финальное обновление счетчика
             if hasattr(self, 'total_label'):
                 total_employees = len(self.all_employees) if hasattr(self, 'all_employees') else 0
                 self.total_label.config(text=f"📊 Показано: {len(employees)} из {total_employees}")
-                self.update_idletasks()  # Обновляем UI для отображения актуального количества записей
-                print(f"DEBUG: Обновлено total_label: Показано {len(employees)} из {total_employees}")
+                self.update_idletasks()
                 
         except Exception as e:
             print(f"Ошибка отображения сотрудников: {e}")

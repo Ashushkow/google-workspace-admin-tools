@@ -13,6 +13,7 @@ from ..api.groups_api import (
     get_group_members, add_user_to_group, remove_user_from_group
 )
 from ..api.users_api import get_user_list
+from ..api.service_adapter import ServiceAdapter
 from ..utils.data_cache import data_cache
 
 

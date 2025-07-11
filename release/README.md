@@ -3,8 +3,8 @@
 # 🚀 Admin Team Tools
 
 <p align="center">
-  <img src="https://img.shields.io/github/actions/workflow/status/yourusername/admin-team-tools/ci.yml?branch=main&style=for-the-badge&logo=github&logoColor=white" alt="CI/CD Status">
-  <img src="https://img.shields.io/codecov/c/github/yourusername/admin-team-tools?style=for-the-badge&logo=codecov&logoColor=white" alt="Coverage">
+  <img src="https://img.shields.io/github/actions/workflow/status/Ashushkow/admin-team-tools/ci.yml?branch=main&style=for-the-badge&logo=github&logoColor=white" alt="CI/CD Status">
+  <img src="https://img.shields.io/codecov/c/github/Ashushkow/admin-team-tools?style=for-the-badge&logo=codecov&logoColor=white" alt="Coverage">
   <img src="https://img.shields.io/badge/python-3.8%2B-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python Version">
   <img src="https://img.shields.io/badge/license-MIT-green.svg?style=for-the-badge" alt="License">
 </p>
@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/Google%20Workspace-Admin%20SDK-red.svg?style=for-the-badge&logo=google&logoColor=white" alt="Google Workspace">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg?style=for-the-badge" alt="Platform">
   <img src="https://img.shields.io/badge/version-2.0.6-brightgreen.svg?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/github/issues/yourusername/admin-team-tools?style=for-the-badge&logo=github&logoColor=white" alt="Issues">
+  <img src="https://img.shields.io/github/issues/Ashushkow/admin-team-tools?style=for-the-badge&logo=github&logoColor=white" alt="Issues">
 </p>
 
 <h3>🎯 Мощное и интуитивное приложение для управления Google Workspace</h3>
@@ -122,7 +122,7 @@
 ### 1️⃣ Клонирование репозитория
 
 ```bash
-git clone https://github.com/yourusername/admin-team-tools.git
+git clone https://github.com/Ashushkow/admin-team-tools.git
 cd admin-team-tools
 ```
 
@@ -281,8 +281,8 @@ python -m pytest tests/test_user_management.py
 
 - 📧 **Email**: support@admin-tools.dev
 - 💬 **Telegram**: @admin_tools_support
-- 🐛 **Баги**: [GitHub Issues](https://github.com/yourusername/admin-team-tools/issues)
-- 💡 **Предложения**: [GitHub Discussions](https://github.com/yourusername/admin-team-tools/discussions)
+- 🐛 **Баги**: [GitHub Issues](https://github.com/Ashushkow/admin-team-tools/issues)
+- 💡 **Предложения**: [GitHub Discussions](https://github.com/Ashushkow/admin-team-tools/discussions)
 
 ---
 
@@ -296,17 +296,17 @@ python -m pytest tests/test_user_management.py
 
 ## 📊 Статистика проекта
 
-<img src="https://img.shields.io/github/stars/yourusername/admin-team-tools?style=social" alt="GitHub stars">
-<img src="https://img.shields.io/github/forks/yourusername/admin-team-tools?style=social" alt="GitHub forks">
-<img src="https://img.shields.io/github/watchers/yourusername/admin-team-tools?style=social" alt="GitHub watchers">
+<img src="https://img.shields.io/github/stars/Ashushkow/admin-team-tools?style=social" alt="GitHub stars">
+<img src="https://img.shields.io/github/forks/Ashushkow/admin-team-tools?style=social" alt="GitHub forks">
+<img src="https://img.shields.io/github/watchers/Ashushkow/admin-team-tools?style=social" alt="GitHub watchers">
 
-<img src="https://img.shields.io/github/issues/yourusername/admin-team-tools" alt="GitHub issues">
-<img src="https://img.shields.io/github/issues-pr/yourusername/admin-team-tools" alt="GitHub pull requests">
-<img src="https://img.shields.io/github/last-commit/yourusername/admin-team-tools" alt="GitHub last commit">
+<img src="https://img.shields.io/github/issues/Ashushkow/admin-team-tools" alt="GitHub issues">
+<img src="https://img.shields.io/github/issues-pr/Ashushkow/admin-team-tools" alt="GitHub pull requests">
+<img src="https://img.shields.io/github/last-commit/Ashushkow/admin-team-tools" alt="GitHub last commit">
 
-<img src="https://img.shields.io/github/languages/top/yourusername/admin-team-tools" alt="GitHub top language">
-<img src="https://img.shields.io/github/languages/count/yourusername/admin-team-tools" alt="GitHub language count">
-<img src="https://img.shields.io/github/repo-size/yourusername/admin-team-tools" alt="GitHub repo size">
+<img src="https://img.shields.io/github/languages/top/Ashushkow/admin-team-tools" alt="GitHub top language">
+<img src="https://img.shields.io/github/languages/count/Ashushkow/admin-team-tools" alt="GitHub language count">
+<img src="https://img.shields.io/github/repo-size/Ashushkow/admin-team-tools" alt="GitHub repo size">
 
 </div>
 
@@ -317,7 +317,7 @@ python -m pytest tests/test_user_management.py
 ### 🎉 **Сделано с ❤️ для администраторов Google Workspace**
 
 <p>
-  <a href="https://github.com/yourusername/admin-team-tools/stargazers">
+  <a href="https://github.com/Ashushkow/admin-team-tools/stargazers">
     <img src="https://img.shields.io/badge/⭐-Поставьте%20звезду%20проекту-yellow?style=for-the-badge" alt="Star this repo">
   </a>
 </p>

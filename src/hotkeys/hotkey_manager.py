@@ -77,6 +77,13 @@ class HotkeyManager:
                 'category': 'Группы'
             },
             
+            # Управление календарями
+            'calendars': {
+                'key': '<Control-Shift-c>',
+                'description': 'Управление календарями',
+                'category': 'Календари'
+            },
+            
             # Служебные
             'help': {
                 'key': '<F1>',

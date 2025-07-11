@@ -3,6 +3,18 @@
 API функции для работы с пользователями Google Workspace.
 """
 
+# -*- coding: utf-8 -*-
+"""
+API функции для работы с пользователями Google Workspace.
+"""
+
+from typing import Any, List, Dict, Optional, Tuple
+from googleapiclient.errors import HttpError
+from ..utils.data_cache import data_cache
+
+# Импортируем адаптер для обратной совместимости
+from .service_adapter import get_user_list as adapter_get_user_list
+
 from typing import Any, List, Dict, Optional, Tuple
 from googleapiclient.errors import HttpError
 from ..utils.data_cache import data_cache
@@ -139,13 +151,14 @@ def get_user_list(service: Any, force_refresh: bool = False) -> List[Dict[str, A
     Получает всех пользователей домена с кэшированием для ускорения.
     
     Args:
-        service: Сервис Google Directory API
+        service: Сервис (может быть новым ServiceAdapter или старым Google API)
         force_refresh: Принудительное обновление кэша
         
     Returns:
         Список пользователей с основными полями
     """
-    return data_cache.get_users(service, force_refresh)
+    # Используем адаптер для новых сервисов
+    return adapter_get_user_list(service, force_refresh)
 
 
 def list_users(service: Any) -> Tuple[str, int]:

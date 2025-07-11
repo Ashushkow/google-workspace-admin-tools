@@ -12,7 +12,7 @@
 
 ```bash
 # Клонирование вашего fork
-git clone https://github.com/yourusername/admin-team-tools.git
+git clone https://github.com/Ashushkow/admin-team-tools.git
 cd admin-team-tools
 
 # Добавление upstream репозитория
