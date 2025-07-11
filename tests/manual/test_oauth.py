@@ -10,7 +10,7 @@ import asyncio
 from pathlib import Path
 
 # Добавляем корневую папку в путь для импорта
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.api.google_api_client import GoogleAPIClient
 from src.utils.enhanced_logger import setup_logging
