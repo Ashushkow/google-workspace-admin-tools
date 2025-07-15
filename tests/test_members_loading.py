@@ -10,7 +10,7 @@ from pathlib import Path
 import time
 
 # Добавляем src в Python path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 def test_members_loading():
     """Тест загрузки участников календаря"""
