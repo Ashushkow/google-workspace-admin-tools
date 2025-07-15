@@ -7,10 +7,12 @@ import tkinter as tk
 from tkinter import messagebox, scrolledtext, ttk
 import requests
 from typing import Any, Optional
+import json
 
 from .ui_components import ModernColors, ModernButton, center_window
 from ..api.groups_api import list_groups, add_user_to_group
 from ..config.enhanced_config import config
+from ..utils.file_paths import get_log_path
 
 
 class AsanaInviteWindow(tk.Toplevel):
@@ -323,9 +325,14 @@ class ErrorLogWindow(tk.Toplevel):
     def load_logs(self):
         """Загрузка логов из файла"""
         try:
-            with open('admin_log.json', 'r', encoding='utf-8') as f:
-                import json
-                logs = json.load(f)
+            admin_log_path = get_log_path('admin_log.json')
+            if admin_log_path.exists():
+                with open(admin_log_path, 'r', encoding='utf-8') as f:
+                    logs = json.load(f)
+            else:
+                # Попробуем найти в старом месте для совместимости
+                with open('admin_log.json', 'r', encoding='utf-8') as f:
+                    logs = json.load(f)
                 
             self.text_logs.delete(1.0, tk.END)
             

@@ -12,6 +12,8 @@ from typing import Dict, List, Optional
 from cryptography.fernet import Fernet
 from pathlib import Path
 
+from .file_paths import get_security_path, get_log_path
+
 
 class SecurityManager:
     """
@@ -19,8 +21,8 @@ class SecurityManager:
     """
     
     def __init__(self):
-        self.key_file = Path(".security_key")
-        self.audit_file = Path("security_audit.json")
+        self.key_file = get_security_path(".security_key")
+        self.audit_file = get_log_path("security_audit.json")
         self.session_timeout = timedelta(hours=1)
         self.last_activity = datetime.now()
         

@@ -23,6 +23,7 @@ from ..api.users_api import get_user_list
 from ..api.service_adapter import ServiceAdapter
 from ..api.groups_api import list_groups
 from ..utils.data_cache import data_cache
+from ..utils.file_paths import get_export_path
 from ..utils.simple_utils import async_manager, error_handler, SimpleProgressDialog, show_api_error
 from ..utils.ui_decorators import handle_service_errors, handle_ui_errors, log_operation, validate_email, measure_performance
 from ..themes.theme_manager import theme_manager
@@ -502,8 +503,13 @@ class AdminToolsMainWindow(tk.Tk):
     @measure_performance
     def export_users(self):
         """Экспорт списка пользователей в файл"""
+        # Предлагаем сохранить в папку экспорта
+        suggested_filename = f"users_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        suggested_path = get_export_path(suggested_filename)
+        
         # Выбираем файл для сохранения
         filename = filedialog.asksaveasfilename(
+            initialfile=str(suggested_path),
             defaultextension='.csv',
             filetypes=[('CSV files', '*.csv'), ('All files', '*.*')],
             title='Сохранить список пользователей'

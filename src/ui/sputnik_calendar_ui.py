@@ -9,8 +9,10 @@ from tkinter import messagebox, ttk, filedialog
 from typing import Any, Optional, List, Dict
 import threading
 import os
+from datetime import datetime
 
 from .ui_components import ModernColors, ModernButton, center_window
+from ..utils.file_paths import get_export_path
 
 
 class SputnikCalendarWindow(tk.Toplevel):
@@ -522,8 +524,13 @@ class SputnikCalendarWindow(tk.Toplevel):
             messagebox.showerror("Ошибка", "Календарь не инициализирован")
             return
         
+        # Предлагаем сохранить в папку экспорта
+        suggested_filename = f"calendar_members_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        suggested_path = get_export_path(suggested_filename)
+        
         # Выбор файла для сохранения
         filename = filedialog.asksaveasfilename(
+            initialfile=str(suggested_path),
             title="Экспорт участников",
             defaultextension=".csv",
             filetypes=[
