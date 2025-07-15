@@ -105,7 +105,8 @@ class GoogleAPIConfig:
         'https://www.googleapis.com/auth/admin.directory.group',
         'https://www.googleapis.com/auth/admin.directory.orgunit',
         'https://www.googleapis.com/auth/admin.directory.domain.readonly',
-        'https://www.googleapis.com/auth/calendar'
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/drive'
     ])
     credentials_file: str = "credentials.json"
     token_file: str = "token.pickle"

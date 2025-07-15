@@ -78,10 +78,22 @@ class HotkeyManager:
             },
             
             # Управление календарями
+            'sputnik_calendar': {
+                'key': '<Control-Shift-s>',
+                'description': 'Календарь SPUTNIK (общий)',
+                'category': 'Календари'
+            },
             'calendars': {
                 'key': '<Control-Shift-c>',
                 'description': 'Управление календарями',
                 'category': 'Календари'
+            },
+            
+            # Управление документами
+            'documents': {
+                'key': '<Control-d>',
+                'description': 'Управление доступом к документам',
+                'category': 'Документы'
             },
             
             # Служебные

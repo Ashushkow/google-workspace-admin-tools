@@ -72,7 +72,7 @@ class MainToolbar(tk.Frame):
         bottom_buttons_frame = tk.Frame(self, bg=ModernColors.BACKGROUND)
         bottom_buttons_frame.pack(fill='x')
         
-        # Группы
+        # Группы и календари
         ModernButton(
             bottom_buttons_frame,
             text='👥 Группы',
@@ -83,9 +83,25 @@ class MainToolbar(tk.Frame):
         
         ModernButton(
             bottom_buttons_frame,
+            text='🎯 SPUTNIK',
+            command=self.callbacks.get('sputnik_calendar', self._no_callback),
+            style='warning',
+            font=('Arial', 9, 'bold')
+        ).pack(side='left', padx=(0, 8))
+        
+        ModernButton(
+            bottom_buttons_frame,
             text='📅 Календари',
             command=self.callbacks.get('calendars', self._no_callback),
             style='primary',
+            font=('Arial', 9)
+        ).pack(side='left', padx=(0, 8))
+        
+        ModernButton(
+            bottom_buttons_frame,
+            text='📄 Документы',
+            command=self.callbacks.get('documents', self._no_callback),
+            style='info',
             font=('Arial', 9)
         ).pack(side='left', padx=(0, 8))
         

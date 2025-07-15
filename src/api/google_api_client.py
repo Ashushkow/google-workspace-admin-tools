@@ -43,6 +43,7 @@ class GoogleAPIClient:
         self.credentials_path = credentials_path
         self.credentials = None
         self.service = None
+        self.drive_service = None  # Добавляем сервис для Drive API
         
     def initialize(self) -> bool:
         """
@@ -59,6 +60,7 @@ class GoogleAPIClient:
             logger.info("Запуск в режиме разработки - используем заглушку для Google API")
             # В режиме разработки возвращаем True даже без реальной инициализации
             self.service = "dev_mode_service"  # Заглушка для режима разработки
+            self.drive_service = "dev_mode_drive_service"  # Заглушка для Drive API
             return True
         
         if not self.credentials_path:
@@ -100,6 +102,11 @@ class GoogleAPIClient:
                 # Создаем сервис Google Admin SDK
                 logger.info("🔧 Создаем подключение к Google Admin SDK...")
                 self.service = build('admin', 'directory_v1', credentials=self.credentials)
+                
+                # Создаем сервис Google Drive API
+                logger.info("🔧 Создаем подключение к Google Drive API...")
+                self.drive_service = build('drive', 'v3', credentials=self.credentials)
+                logger.info("✅ Google Drive API успешно инициализирован")
                 
                 # Проверяем подключение и права доступа (опционально)
                 logger.info("🔍 Проверяем подключение к Google Admin SDK...")
@@ -150,6 +157,15 @@ class GoogleAPIClient:
         except Exception as e:
             logger.error(f"Ошибка инициализации Google API клиента: {e}")
             return False
+    
+    def get_credentials(self):
+        """
+        Возвращает объект credentials для использования в других сервисах
+        
+        Returns:
+            Google API credentials
+        """
+        return self.credentials
     
     async def test_connection(self) -> bool:
         """
@@ -385,6 +401,7 @@ class GoogleAPIClient:
                 'https://www.googleapis.com/auth/admin.directory.group',
                 'https://www.googleapis.com/auth/admin.directory.orgunit',
                 'https://www.googleapis.com/auth/calendar',
+                'https://www.googleapis.com/auth/drive',  # Добавляем Drive API для управления документами
             ]
             
             # Проверяем существующий токен
@@ -450,6 +467,7 @@ class GoogleAPIClient:
                     'https://www.googleapis.com/auth/admin.directory.group',
                     'https://www.googleapis.com/auth/admin.directory.orgunit',
                     'https://www.googleapis.com/auth/calendar',
+                    'https://www.googleapis.com/auth/drive',  # Добавляем Drive API для управления документами
                 ]
             )
             logger.info("✅ Service Account credentials настроены успешно")
