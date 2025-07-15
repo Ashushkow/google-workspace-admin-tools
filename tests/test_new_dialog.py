@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 
 # Добавляем src в Python path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 def test_imports():
     """Тестирование импортов"""

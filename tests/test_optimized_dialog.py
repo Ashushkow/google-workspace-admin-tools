@@ -10,7 +10,7 @@ from pathlib import Path
 import tkinter as tk
 
 # Добавляем src в Python path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 def test_optimized_dialog():
     """Тест оптимизированного диалога"""

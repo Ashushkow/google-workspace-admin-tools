@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 
 # Добавляем src в Python path
-sys.path.insert(0, str(Path(__file__).parent / 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from src.api.sputnik_calendar import create_sputnik_calendar_manager
 from src.api.calendar_api import GoogleCalendarAPI
