@@ -27,7 +27,7 @@ class DocumentManagementWindow:
         
         self.window = tk.Toplevel(parent)
         self.window.title("📄 Управление доступом к документам")
-        self.window.geometry("800x600")
+        self.window.geometry("700x550")  # Увеличили высоту с 500 до 550
         self.window.configure(bg=ModernColors.BACKGROUND)
         self.window.transient(parent)
         self.window.grab_set()
@@ -47,16 +47,16 @@ class DocumentManagementWindow:
         """Создание виджетов интерфейса"""
         # Основной контейнер с прокруткой
         main_frame = tk.Frame(self.window, bg=ModernColors.BACKGROUND)
-        main_frame.pack(fill='both', expand=True, padx=15, pady=15)
+        main_frame.pack(fill='both', expand=True, padx=10, pady=10)  # Уменьшили отступы
         
         # Заголовок
         title_frame = tk.Frame(main_frame, bg=ModernColors.BACKGROUND)
-        title_frame.pack(fill='x', pady=(0, 15))
+        title_frame.pack(fill='x', pady=(0, 10))  # Уменьшили отступ
         
         title_label = tk.Label(
             title_frame,
             text="📄 Управление доступом к Google документам",
-            font=('Segoe UI', 14, 'bold'),
+            font=('Segoe UI', 12, 'bold'),  # Уменьшили размер шрифта
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY
         )
@@ -69,10 +69,10 @@ class DocumentManagementWindow:
             font=('Segoe UI', 9, 'bold'),
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY,
-            padx=8,
-            pady=6
+            padx=6,    # Уменьшили отступы
+            pady=4     # Уменьшили отступы
         )
-        url_frame.pack(fill='x', padx=15, pady=8)
+        url_frame.pack(fill='x', padx=10, pady=6)  # Уменьшили отступы
         
         url_input_frame = tk.Frame(url_frame, bg=ModernColors.BACKGROUND)
         url_input_frame.pack(fill='x')
@@ -105,10 +105,10 @@ class DocumentManagementWindow:
             font=('Segoe UI', 9, 'bold'),
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY,
-            padx=8,
-            pady=6
+            padx=6,    # Уменьшили отступы
+            pady=4     # Уменьшили отступы
         )
-        self.doc_info_frame.pack(fill='x', padx=15, pady=8)
+        self.doc_info_frame.pack(fill='x', padx=10, pady=6)  # Уменьшили отступы
         
         self.doc_info_label = tk.Label(
             self.doc_info_frame,
@@ -127,14 +127,14 @@ class DocumentManagementWindow:
             font=('Segoe UI', 9, 'bold'),
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY,
-            padx=8,
-            pady=6
+            padx=6,    # Уменьшили отступы
+            pady=4     # Уменьшили отступы
         )
-        access_frame.pack(fill='x', padx=15, pady=8)
+        access_frame.pack(fill='x', padx=10, pady=6)  # Уменьшили отступы
         
         # Добавление доступа
         add_access_frame = tk.Frame(access_frame, bg=ModernColors.BACKGROUND)
-        add_access_frame.pack(fill='x', pady=(0, 8))
+        add_access_frame.pack(fill='x', pady=(0, 6))  # Уменьшили отступ
         
         tk.Label(
             add_access_frame,
@@ -203,10 +203,10 @@ class DocumentManagementWindow:
             font=('Segoe UI', 9, 'bold'),
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY,
-            padx=8,
-            pady=6
+            padx=6,    # Уменьшили отступы
+            pady=4     # Уменьшили отступы
         )
-        permissions_frame.pack(fill='both', expand=True, padx=15, pady=8)
+        permissions_frame.pack(fill='both', expand=False, padx=10, pady=6)  # Убрали expand=True
         
         # Таблица разрешений
         columns = ('Email', 'Роль', 'Тип')
@@ -214,7 +214,7 @@ class DocumentManagementWindow:
             permissions_frame,
             columns=columns,
             show='headings',
-            height=8
+            height=6  # Уменьшили высоту таблицы с 8 до 6
         )
         
         # Настройка колонок
@@ -222,9 +222,9 @@ class DocumentManagementWindow:
         self.permissions_tree.heading('Роль', text='Роль')
         self.permissions_tree.heading('Тип', text='Тип')
         
-        self.permissions_tree.column('Email', width=300)
-        self.permissions_tree.column('Роль', width=150)
-        self.permissions_tree.column('Тип', width=100)
+        self.permissions_tree.column('Email', width=250)  # Уменьшили ширину
+        self.permissions_tree.column('Роль', width=120)   # Уменьшили ширину
+        self.permissions_tree.column('Тип', width=80)     # Уменьшили ширину
         
         # Скроллбар для таблицы
         scrollbar = ttk.Scrollbar(permissions_frame, orient='vertical', command=self.permissions_tree.yview)
@@ -233,23 +233,28 @@ class DocumentManagementWindow:
         self.permissions_tree.pack(side='left', fill='both', expand=True)
         scrollbar.pack(side='right', fill='y')
         
-        # Кнопки управления
-        buttons_frame = tk.Frame(self.window, bg=ModernColors.BACKGROUND)
-        buttons_frame.pack(fill='x', padx=15, pady=8)
+        # Кнопки управления (фиксированы в нижней части)
+        buttons_frame = tk.Frame(self.window, bg=ModernColors.BACKGROUND, height=50)
+        buttons_frame.pack(fill='x', padx=10, pady=10, side='bottom')  # Закрепляем снизу
+        buttons_frame.pack_propagate(False)  # Фиксируем высоту
+        
+        # Создаем внутренний фрейм для центрирования кнопок
+        inner_buttons_frame = tk.Frame(buttons_frame, bg=ModernColors.BACKGROUND)
+        inner_buttons_frame.pack(expand=True, fill='both')
         
         ModernButton(
-            buttons_frame,
-            text="Обновить список",
+            inner_buttons_frame,
+            text="🔄 Обновить список",  # Добавили иконку
             command=self._refresh_permissions,
             button_type="info"
-        ).pack(side='left', padx=(0, 10))
+        ).pack(side='left', padx=(0, 15), pady=10)
         
         ModernButton(
-            buttons_frame,
-            text="Закрыть",
+            inner_buttons_frame,
+            text="❌ Закрыть",  # Добавили иконку
             command=self.window.destroy,
             button_type="secondary"
-        ).pack(side='right')
+        ).pack(side='right', padx=(15, 0), pady=10)
     
     def _setup_url_context_menu(self):
         """Настройка контекстного меню для поля URL с функциями копирования и вставки"""

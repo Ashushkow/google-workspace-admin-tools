@@ -24,7 +24,7 @@ def show_oauth2_priority_banner() -> bool:
         bool: True если обнаружены OAuth 2.0 credentials
     """
     print("=" * 70)
-    print("🚀 ADMIN TEAM TOOLS v2.0.7")
+    print("🚀 ADMIN TEAM TOOLS v2.0.8")
     print("📊 Google Workspace Management System")
     print("=" * 70)
     print("🔐 Приоритет авторизации: OAuth 2.0 (интерактивная)")

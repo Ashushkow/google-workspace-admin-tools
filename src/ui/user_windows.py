@@ -76,13 +76,13 @@ class CreateUserWindow(tk.Toplevel):
         self._add_validation(self.entry_pass, 32)
 
         # Generate Password Button
-        self.btn_gen_pass = tk.Button(self, text='Сгенерировать', 
+        self.btn_gen_pass = tk.Button(self, text='🔑 Сгенерировать', 
                                      command=self.generate_password, 
-                                     font=('Arial', 9), width=14)
+                                     font=('Arial', 9), width=16)
         self.btn_gen_pass.grid(row=5, column=1, padx=8, sticky='e')
 
         # Create Button
-        self.btn_create = tk.Button(self, text='Создать', command=self.create_user, 
+        self.btn_create = tk.Button(self, text='➕ Создать', command=self.create_user, 
                                    font=('Arial', 11, 'bold'), width=18)
         self.btn_create.grid(row=6, column=0, columnspan=2, pady=18)
 
@@ -93,7 +93,7 @@ class CreateUserWindow(tk.Toplevel):
         self.txt_result.config(state=tk.DISABLED)
 
         # Close Button
-        self.btn_close = tk.Button(self, text='Закрыть', command=self.destroy, 
+        self.btn_close = tk.Button(self, text='❌ Закрыть', command=self.destroy, 
                                   font=('Arial', 10), width=18)
         self.btn_close.grid(row=8, column=0, columnspan=2, pady=(2, 12))
 
@@ -258,12 +258,12 @@ class EditUserWindow(tk.Toplevel):
         self.entry_pass.grid(row=3, column=1, pady=4)
 
         # Кнопки
-        self.btn_update = tk.Button(right_frame, text='Сохранить изменения', 
-                                   command=self.update_user, font=('Arial', 10, 'bold'), width=20)
+        self.btn_update = tk.Button(right_frame, text='💾 Сохранить изменения', 
+                                   command=self.update_user, font=('Arial', 10, 'bold'), width=22)
         self.btn_update.grid(row=4, column=0, columnspan=2, pady=12)
 
-        self.btn_delete = tk.Button(right_frame, text='Удалить пользователя', 
-                                   command=self.delete_user, font=('Arial', 10, 'bold'), width=20)
+        self.btn_delete = tk.Button(right_frame, text='🗑️ Удалить пользователя', 
+                                   command=self.delete_user, font=('Arial', 10, 'bold'), width=22)
         self.btn_delete.grid(row=5, column=0, columnspan=2, pady=(0, 10))
 
         # Область результата
@@ -273,8 +273,8 @@ class EditUserWindow(tk.Toplevel):
         self.txt_result.config(state=tk.DISABLED)
 
         # Кнопка закрытия
-        self.btn_close = tk.Button(right_frame, text='Закрыть', command=self.destroy, 
-                                  font=('Arial', 10, 'bold'), width=20)
+        self.btn_close = tk.Button(right_frame, text='❌ Закрыть', command=self.destroy, 
+                                  font=('Arial', 10, 'bold'), width=22)
         self.btn_close.grid(row=7, column=0, columnspan=2, pady=(2, 10))
 
     def on_user_select(self, event):

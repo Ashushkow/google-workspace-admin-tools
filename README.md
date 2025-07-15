@@ -6,7 +6,7 @@
 
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.7-brightgreen.svg)](https://github.com/Ashushkow/google-workspace-admin-tools/releases)
+[![Version](https://img.shields.io/badge/version-2.0.8-brightgreen.svg)](https://github.com/Ashushkow/google-workspace-admin-tools/releases)
 [![Tests](https://img.shields.io/badge/tests-25%2B%20passing-success.svg)](#testing)
 [![Coverage](https://img.shields.io/badge/coverage-75%25-green.svg)](#testing)
 
@@ -45,7 +45,7 @@
 |  Документов | 15+ |
 |  Скриптов | 12+ |
 |  Зависимостей | 20+ |
-|  Версия | 2.0.7 |
+|  Версия | 2.0.8 |
 |  Python версия | 3.8+ (рекомендуется 3.11+) |
 |  Модулей | 35+ |
 |  API интеграций | 4 (Directory, Calendar, Reports, Groups) |

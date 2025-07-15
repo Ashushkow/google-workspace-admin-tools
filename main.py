@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Admin Team Tools v2.0.7 - Google Workspace Management
+Admin Team Tools v2.0.8 - Google Workspace Management
 Приоритет: OAuth 2.0 авторизация для безопасного интерактивного управления
 """
 
@@ -21,7 +21,7 @@ from src.config.enhanced_config import config
 def show_startup_banner():
     """Показывает стартовый баннер с информацией об OAuth 2.0"""
     print("=" * 70)
-    print("🚀 ADMIN TEAM TOOLS v2.0.7")
+    print("🚀 ADMIN TEAM TOOLS v2.0.8")
     print("📊 Google Workspace Management System")
     print("=" * 70)
     print("🔐 Приоритет авторизации: OAuth 2.0 (интерактивная)")
@@ -62,9 +62,6 @@ async def main() -> int:
         Код выхода
     """
     try:
-        # Показываем стартовый баннер
-        show_startup_banner()
-        
         # Создаем и запускаем приложение
         app = Application()
         return await app.start()
@@ -79,10 +76,9 @@ async def main() -> int:
 
 def cli_main():
     """Синхронная точка входа для CLI"""
-    # Настройка базового логирования
     try:
-        logger = setup_logging()
-        logger.info("🚀 Запуск Admin Team Tools с приоритетом OAuth 2.0")
+        # Показываем стартовый баннер
+        show_startup_banner()
         
         # Запуск асинхронного приложения
         return asyncio.run(main())

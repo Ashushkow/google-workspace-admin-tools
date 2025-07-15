@@ -43,7 +43,7 @@ class Application:
         try:
             # Настройка логирования
             self.logger = setup_logging(config.settings.app_log_level)
-            self.logger.info("🚀 Запуск Admin Team Tools v{config.settings.app_version}")
+            self.logger.info(f"🚀 Запуск Admin Team Tools v{config.settings.app_version}")
             
             # Валидация конфигурации
             await self._validate_configuration()
