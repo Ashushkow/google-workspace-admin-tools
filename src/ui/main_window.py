@@ -7,8 +7,9 @@
 import tkinter as tk
 from tkinter import messagebox, simpledialog, filedialog
 import csv
+import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict
 
 from .ui_components import ModernColors, ModernButton, StatusIndicator, center_window
 from .components import StatisticsPanel, ActivityLog, MainToolbar, ThemeSwitcher
@@ -17,6 +18,7 @@ from .employee_list_window import EmployeeListWindow
 from .additional_windows import AsanaInviteWindow, ErrorLogWindow
 from .group_management import GroupManagementWindow
 from .calendar_management import open_calendar_management
+from .sputnik_calendar_ui import open_sputnik_calendar_window
 from ..api.users_api import get_user_list
 from ..api.service_adapter import ServiceAdapter
 from ..api.groups_api import list_groups
@@ -37,6 +39,7 @@ class AdminToolsMainWindow(tk.Tk):
         super().__init__()
         self.service = service
         self._ui_initialized = False
+        self.logger = logging.getLogger(__name__)
         
         # Компоненты UI
         self.statistics_panel = None
@@ -184,9 +187,24 @@ class AdminToolsMainWindow(tk.Tk):
         calendars_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Календари", menu=calendars_menu)
         calendars_menu.add_command(
+            label="🎯 Календарь SPUTNIK (общий)",
+            command=self.open_sputnik_calendar,
+            accelerator="Ctrl+Shift+S"
+        )
+        calendars_menu.add_separator()
+        calendars_menu.add_command(
             label="Управление календарями",
             command=self.open_calendar_management,
             accelerator="Ctrl+Shift+C"
+        )
+        
+        # Меню "Документы"
+        documents_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Документы", menu=documents_menu)
+        documents_menu.add_command(
+            label="Управление доступом к документам",
+            command=self.open_document_management,
+            accelerator="Ctrl+D"
         )
         
         # Меню "Вид"
@@ -240,7 +258,9 @@ class AdminToolsMainWindow(tk.Tk):
             'create_user': self.open_create_user,
             'edit_user': self.open_edit_user,
             'groups': self.open_group_management,
+            'sputnik_calendar': self.open_sputnik_calendar,
             'calendars': self.open_calendar_management,
+            'documents': self.open_document_management,
             'asana': self.open_asana_invite
         }
         
@@ -355,7 +375,11 @@ class AdminToolsMainWindow(tk.Tk):
         self.hotkey_manager.register_callback('groups', self.open_group_management)
         
         # Календари
+        self.hotkey_manager.register_callback('sputnik_calendar', self.open_sputnik_calendar)
         self.hotkey_manager.register_callback('calendars', self.open_calendar_management)
+        
+        # Документы
+        self.hotkey_manager.register_callback('documents', self.open_document_management)
         
         # Темы
         self.hotkey_manager.register_callback('theme_light', lambda: theme_manager.set_theme('light'))
@@ -401,6 +425,68 @@ class AdminToolsMainWindow(tk.Tk):
     def open_calendar_management(self):
         """Открытие окна управления календарями"""
         window = open_calendar_management(self, self.service)
+
+    @handle_ui_errors("открытие окна календаря SPUTНIK")
+    def open_sputnik_calendar(self):
+        """Открытие окна управления календарем SPUTНIK (общий)"""
+        window = open_sputnik_calendar_window(self)
+        if window:
+            self.activity_log.add_entry("🎯 Открыт календарь SPUTНIK (общий)")
+        return window
+
+    @handle_ui_errors("открытие окна управления документами")
+    def open_document_management(self):
+        """Открытие окна управления доступом к документам"""
+        try:
+            # Проверяем, что сервис инициализирован
+            if not self.service:
+                messagebox.showerror("Ошибка", "Google API сервис не инициализирован")
+                return
+            
+            # Получаем credentials из сервиса
+            google_client = None
+            
+            # Попробуем получить клиент через user_service
+            if hasattr(self.service, 'user_service') and self.service.user_service:
+                user_repo = self.service.user_service.user_repo
+                if hasattr(user_repo, 'client'):
+                    google_client = user_repo.client
+            
+            # Если не получилось, попробуем через service adapter
+            if not google_client and hasattr(self.service, 'user_repository'):
+                if hasattr(self.service.user_repository, 'client'):
+                    google_client = self.service.user_repository.client
+            
+            # Последняя попытка - создаем новый клиент
+            if not google_client:
+                from src.api.google_api_client import GoogleAPIClient
+                from src.config.enhanced_config import config
+                google_client = GoogleAPIClient(config.settings.google_application_credentials)
+                if not google_client.initialize():
+                    messagebox.showerror("Ошибка", "Не удалось инициализировать Google API клиент")
+                    return
+            
+            # Получаем credentials
+            credentials = google_client.get_credentials()
+            if not credentials:
+                messagebox.showerror("Ошибка", "Не удалось получить учетные данные Google API")
+                return
+            
+            # Создаем сервис для документов (используем настоящий DocumentService)
+            from src.services.document_service import DocumentService
+            
+            document_service = DocumentService(credentials)
+            
+            # Открываем окно с предустановленным URL
+            default_url = "https://docs.google.com/document/d/1iXos0bTHv3nwXcYvAjPSIYzQOflcygwjj4LKD5Rftdk/edit#heading=h.mfzrrwzcspx2"
+            window = open_document_management(self, document_service, default_url)
+            if window:
+                self.activity_log.add_entry("📄 Открыто управление документами")
+            return window
+                
+        except Exception as e:
+            self.logger.error(f"Ошибка при открытии окна управления документами: {e}")
+            messagebox.showerror("Ошибка", f"Не удалось открыть окно управления документами: {e}")
 
     @handle_ui_errors("открытие окна приглашения в Asana")
     def open_asana_invite(self):
@@ -590,3 +676,8 @@ class AdminToolsMainWindow(tk.Tk):
         """Корректный выход из приложения"""
         self._save_theme_preferences()
         self.destroy()
+
+def open_document_management(parent, document_service, default_url=None):
+    """Функция для открытия окна управления документами (избегаем циклических импортов)"""
+    from src.ui.document_management import DocumentManagementWindow
+    return DocumentManagementWindow(parent, document_service, default_url)
