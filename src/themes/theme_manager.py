@@ -8,6 +8,8 @@ import json
 import os
 from pathlib import Path
 
+from ..utils.file_paths import get_config_path
+
 
 class Theme:
     """Класс для хранения настроек темы"""
@@ -148,19 +150,21 @@ class ThemeManager:
             except Exception as e:
                 print(f"Ошибка в callback смены темы: {e}")
                 
-    def save_theme_preference(self, config_path: str):
+    def save_theme_preference(self, config_filename: str = 'theme_config.json'):
         """Сохранить предпочтение темы"""
         try:
+            config_path = get_config_path(config_filename)
             config = {'current_theme': self.current_theme.name}
             with open(config_path, 'w', encoding='utf-8') as f:
                 json.dump(config, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Ошибка сохранения настроек темы: {e}")
             
-    def load_theme_preference(self, config_path: str):
+    def load_theme_preference(self, config_filename: str = 'theme_config.json'):
         """Загрузить предпочтение темы"""
         try:
-            if os.path.exists(config_path):
+            config_path = get_config_path(config_filename)
+            if config_path.exists():
                 with open(config_path, 'r', encoding='utf-8') as f:
                     config = json.load(f)
                     theme_name = config.get('current_theme', 'light')

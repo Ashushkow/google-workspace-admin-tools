@@ -11,6 +11,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from .file_paths import get_log_path
+
 class ColoredFormatter(logging.Formatter):
     """Цветной форматтер для консольного вывода"""
     
@@ -65,7 +67,7 @@ def setup_logging(log_level: str = "INFO", log_dir: str = "logs") -> logging.Log
     )
     
     # Ротирующийся файл для всех логов
-    main_log_file = log_path / 'admin_tools.log'
+    main_log_file = get_log_path('admin_tools.log')
     main_handler = logging.handlers.RotatingFileHandler(
         main_log_file,
         maxBytes=10 * 1024 * 1024,  # 10MB
@@ -76,7 +78,7 @@ def setup_logging(log_level: str = "INFO", log_dir: str = "logs") -> logging.Log
     main_handler.setLevel(logging.DEBUG)
     
     # Отдельный файл для ошибок
-    error_log_file = log_path / 'errors.log'
+    error_log_file = get_log_path('errors.log')
     error_handler = logging.handlers.RotatingFileHandler(
         error_log_file,
         maxBytes=5 * 1024 * 1024,   # 5MB
