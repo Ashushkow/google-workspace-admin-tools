@@ -26,7 +26,7 @@ class AppSettings(BaseSettings):
     
     # Application
     app_name: str = "Admin Team Tools"
-    app_version: str = "2.0.7"
+    app_version: str = "2.0.8"
     app_debug: bool = False
     app_log_level: str = "INFO"
     cli_mode: bool = False
@@ -47,7 +47,7 @@ class AppSettings(BaseSettings):
     # UI
     ui_theme: str = "light"
     ui_language: str = "ru"
-    ui_window_size: str = "1200x800"
+    ui_window_size: str = "600x400"
     
     # Logging
     log_file: str = "logs/admin_tools.log"

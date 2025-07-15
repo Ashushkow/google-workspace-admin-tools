@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "admin-team-tools"
-version = "2.0.7"
+version = "2.0.8"
 description = "Профессиональное приложение для управления пользователями Google Workspace"
 readme = "README.md"
 requires-python = ">=3.8"

@@ -227,12 +227,7 @@ class AdminToolsMainWindow(tk.Tk):
     @handle_ui_errors("открытие окна редактирования пользователя")
     def open_edit_user(self) -> None:
         """Открытие окна редактирования пользователя"""
-        user_email = simpledialog.askstring(
-            'Редактирование пользователя',
-            'Введите email пользователя для редактирования:'
-        )
-        if user_email:
-            EditUserWindow(self, self.service, user_email)
+        EditUserWindow(self, self.service)
 
     @handle_ui_errors("открытие окна управления группами")
     def open_group_management(self) -> None:

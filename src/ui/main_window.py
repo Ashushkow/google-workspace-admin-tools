@@ -59,7 +59,7 @@ class AdminToolsMainWindow(tk.Tk):
         
         # Настройка главного окна
         self.title('Admin Team Tools v2.0.5 - Управление пользователями Google Workspace')
-        self.geometry('750x500')
+        self.geometry('600x400')
         self.resizable(True, True)
         
         # Центрируем окно
@@ -143,111 +143,111 @@ class AdminToolsMainWindow(tk.Tk):
         
         # Меню "Файл"
         file_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Файл", menu=file_menu)
+        menubar.add_cascade(label="📁 Файл", menu=file_menu)
         file_menu.add_command(
-            label="Экспорт пользователей",
+            label="📤 Экспорт пользователей",
             command=self.export_users,
             accelerator="Ctrl+E"
         )
         file_menu.add_separator()
         file_menu.add_command(
-            label="Выход",
+            label="❌ Выход",
             command=self.quit_application,
             accelerator="Ctrl+Q"
         )
         
         # Меню "Пользователи"
         users_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Пользователи", menu=users_menu)
+        menubar.add_cascade(label="👥 Пользователи", menu=users_menu)
         users_menu.add_command(
-            label="Список пользователей",
+            label="📋 Список пользователей",
             command=self.open_employee_list,
             accelerator="Ctrl+U"
         )
         users_menu.add_command(
-            label="Новый пользователь",
+            label="➕ Новый пользователь",
             command=self.open_create_user,
             accelerator="Ctrl+N"
         )
         users_menu.add_command(
-            label="Редактировать пользователя",
+            label="✏️ Редактировать пользователя",
             command=self.open_edit_user,
             accelerator="Ctrl+Enter"
         )
         
         # Меню "Группы"
         groups_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Группы", menu=groups_menu)
+        menubar.add_cascade(label="🏢 Группы", menu=groups_menu)
         groups_menu.add_command(
-            label="Управление группами",
+            label="⚙️ Управление группами",
             command=self.open_group_management,
             accelerator="Ctrl+G"
         )
         
         # Меню "Календари"
         calendars_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Календари", menu=calendars_menu)
+        menubar.add_cascade(label="📅 Календари", menu=calendars_menu)
         calendars_menu.add_command(
-            label="🎯 Календарь SPUTNIK (общий)",
+            label="🛰️ Календарь SPUTNIK (общий)",
             command=self.open_sputnik_calendar,
             accelerator="Ctrl+Shift+S"
         )
         calendars_menu.add_separator()
         calendars_menu.add_command(
-            label="Управление календарями",
+            label="📅 Управление календарями",
             command=self.open_calendar_management,
             accelerator="Ctrl+Shift+C"
         )
         
         # Меню "Документы"
         documents_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Документы", menu=documents_menu)
+        menubar.add_cascade(label="📄 Документы", menu=documents_menu)
         documents_menu.add_command(
-            label="Управление доступом к документам",
+            label="🔐 Управление доступом к документам",
             command=self.open_document_management,
             accelerator="Ctrl+D"
         )
         
         # Меню "Вид"
         view_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Вид", menu=view_menu)
+        menubar.add_cascade(label="👁️ Вид", menu=view_menu)
         
         # Подменю тем
         theme_menu = tk.Menu(view_menu, tearoff=0)
-        view_menu.add_cascade(label="Тема", menu=theme_menu)
+        view_menu.add_cascade(label="🎨 Тема", menu=theme_menu)
         theme_menu.add_command(
-            label="Светлая",
+            label="☀️ Светлая",
             command=lambda: theme_manager.set_theme('light'),
             accelerator="Ctrl+1"
         )
         theme_menu.add_command(
-            label="Тёмная",
+            label="🌙 Тёмная",
             command=lambda: theme_manager.set_theme('dark'),
             accelerator="Ctrl+2"
         )
         theme_menu.add_command(
-            label="Синяя",
+            label="🌊 Синяя",
             command=lambda: theme_manager.set_theme('blue'),
             accelerator="Ctrl+3"
         )
         
         view_menu.add_separator()
         view_menu.add_command(
-            label="Обновить",
+            label="🔄 Обновить",
             command=self.refresh_data,
             accelerator="Ctrl+R"
         )
         
         # Меню "Справка"
         help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Справка", menu=help_menu)
+        menubar.add_cascade(label="❓ Справка", menu=help_menu)
         help_menu.add_command(
-            label="Горячие клавиши",
+            label="⌨️ Горячие клавиши",
             command=self.hotkey_manager.show_help_dialog,
             accelerator="F1"
         )
         help_menu.add_command(
-            label="О программе",
+            label="ℹ️ О программе",
             command=self.show_about,
             accelerator="Ctrl+F1"
         )
@@ -404,18 +404,11 @@ class AdminToolsMainWindow(tk.Tk):
         window = CreateUserWindow(self, self.service)
 
     @handle_service_errors("открытие окна редактирования пользователя")
-    @validate_email
     def open_edit_user(self):
         """Открытие окна редактирования пользователя"""
-        # Запрашиваем email пользователя
-        user_email = simpledialog.askstring(
-            'Редактирование пользователя',
-            'Введите email пользователя для редактирования:'
-        )
-        
-        if user_email:
-            window = EditUserWindow(self, self.service, user_email)
-            return f"Открыто окно редактирования пользователя: {user_email}"
+        # Открываем окно со списком всех пользователей для выбора
+        window = EditUserWindow(self, self.service)
+        return "Открыто окно редактирования пользователя"
 
     @handle_service_errors("открытие окна управления группами")
     def open_group_management(self):
@@ -439,55 +432,159 @@ class AdminToolsMainWindow(tk.Tk):
     def open_document_management(self):
         """Открытие окна управления доступом к документам"""
         try:
+            self.logger.info("🔄 Начало открытия окна управления документами")
+            
             # Проверяем, что сервис инициализирован
             if not self.service:
+                self.logger.error("❌ Google API сервис не инициализирован")
                 messagebox.showerror("Ошибка", "Google API сервис не инициализирован")
                 return
             
-            # Получаем credentials из сервиса
-            google_client = None
+            self.logger.info("✅ Сервис инициализирован, получаем Google API клиент")
             
-            # Попробуем получить клиент через user_service
-            if hasattr(self.service, 'user_service') and self.service.user_service:
-                user_repo = self.service.user_service.user_repo
-                if hasattr(user_repo, 'client'):
-                    google_client = user_repo.client
+            # Упрощенный подход - используем прямое создание клиента с уже проверенными credentials
+            self.logger.info("🔄 Создаем новый Google API клиент")
+            from src.api.google_api_client import GoogleAPIClient
+            from src.config.enhanced_config import config
             
-            # Если не получилось, попробуем через service adapter
-            if not google_client and hasattr(self.service, 'user_repository'):
-                if hasattr(self.service.user_repository, 'client'):
-                    google_client = self.service.user_repository.client
+            google_client = GoogleAPIClient(config.settings.google_application_credentials)
+            if not google_client.initialize():
+                self.logger.error("❌ Не удалось инициализировать Google API клиент")
+                messagebox.showerror("Ошибка", "Не удалось инициализировать Google API клиент")
+                return
             
-            # Последняя попытка - создаем новый клиент
-            if not google_client:
-                from src.api.google_api_client import GoogleAPIClient
-                from src.config.enhanced_config import config
-                google_client = GoogleAPIClient(config.settings.google_application_credentials)
-                if not google_client.initialize():
-                    messagebox.showerror("Ошибка", "Не удалось инициализировать Google API клиент")
-                    return
+            self.logger.info("✅ Google API клиент инициализирован")
             
             # Получаем credentials
+            self.logger.info("🔄 Получаем credentials")
             credentials = google_client.get_credentials()
             if not credentials:
+                self.logger.error("❌ Не удалось получить учетные данные")
                 messagebox.showerror("Ошибка", "Не удалось получить учетные данные Google API")
                 return
             
-            # Создаем сервис для документов (используем настоящий DocumentService)
-            from src.services.document_service import DocumentService
+            self.logger.info("✅ Credentials получены успешно")
+            
+            # Создаем сервис для документов (избегаем циклические импорты)
+            self.logger.info("🔄 Создаем DocumentService")
+            
+            # Прямой импорт без использования пакетной структуры
+            from src.api.drive_api import DriveAPI, DrivePermission
+            from dataclasses import dataclass
+            from typing import List, Optional
+            
+            @dataclass
+            class DocumentInfo:
+                """Информация о документе с доступами"""
+                file_id: str
+                name: str
+                url: str
+                owner: str
+                permissions: List[DrivePermission]
+            
+            class DocumentService:
+                """Упрощенный DocumentService для избежания циклических импортов"""
+                def __init__(self, credentials):
+                    self.drive_api = DriveAPI(credentials)
+                    self.logger = logging.getLogger(__name__)
+                
+                def get_document_info(self, document_url):
+                    """Получает информацию о документе"""
+                    try:
+                        file_id = self.drive_api.extract_file_id_from_url(document_url)
+                        if not file_id:
+                            return None
+                        
+                        # Получаем информацию о файле
+                        drive_file = self.drive_api.get_file_info(file_id)
+                        if not drive_file:
+                            return None
+                        
+                        # Создаем DocumentInfo с правильными атрибутами
+                        return DocumentInfo(
+                            file_id=drive_file.file_id,
+                            name=drive_file.name,
+                            url=drive_file.web_view_link,
+                            owner=drive_file.owner_email or "Неизвестно",
+                            permissions=drive_file.permissions
+                        )
+                        
+                    except Exception as e:
+                        self.logger.error(f"Ошибка при получении информации о документе: {e}")
+                        return None
+                
+                def list_document_permissions(self, document_url):
+                    """Получает список всех разрешений для документа"""
+                    try:
+                        file_id = self.drive_api.extract_file_id_from_url(document_url)
+                        if not file_id:
+                            self.logger.error(f"Не удалось извлечь ID файла из URL: {document_url}")
+                            return []
+                        
+                        # Получаем список разрешений
+                        permissions = self.drive_api.get_permissions(file_id)
+                        self.logger.info(f"📋 Получено {len(permissions)} разрешений для документа {file_id}")
+                        return permissions
+                        
+                    except Exception as e:
+                        self.logger.error(f"Ошибка при получении разрешений: {e}")
+                        return []
+                
+                def get_role_description(self, role):
+                    """Возвращает описание роли на русском языке"""
+                    role_descriptions = {
+                        'reader': 'Чтение',
+                        'commenter': 'Комментирование', 
+                        'writer': 'Редактирование',
+                        'owner': 'Владелец'
+                    }
+                    return role_descriptions.get(role, role)
+                
+                def get_permission_type_description(self, perm_type):
+                    """Возвращает описание типа разрешения на русском языке"""
+                    type_descriptions = {
+                        'user': 'Пользователь',
+                        'group': 'Группа',
+                        'domain': 'Домен',
+                        'anyone': 'Любой'
+                    }
+                    return type_descriptions.get(perm_type, perm_type)
+                
+                def grant_access(self, request):
+                    """Предоставляет доступ к документу (заглушка)"""
+                    self.logger.info(f"📋 Попытка предоставить доступ: {request}")
+                    # Для упрощения возвращаем False - функция не реализована
+                    return False
+                
+                def revoke_access(self, document_url, email):
+                    """Отзывает доступ к документу (заглушка)"""
+                    self.logger.info(f"📋 Попытка отозвать доступ для {email}")
+                    # Для упрощения возвращаем False - функция не реализована
+                    return False
+                
+                def change_access_role(self, document_url, email, new_role):
+                    """Изменяет роль доступа (заглушка)"""
+                    self.logger.info(f"📋 Попытка изменить роль для {email} на {new_role}")
+                    # Для упрощения возвращаем False - функция не реализована
+                    return False
             
             document_service = DocumentService(credentials)
+            self.logger.info("✅ DocumentService создан успешно")
             
             # Открываем окно с предустановленным URL
+            self.logger.info("🔄 Открываем окно управления документами")
             default_url = "https://docs.google.com/document/d/1iXos0bTHv3nwXcYvAjPSIYzQOflcygwjj4LKD5Rftdk/edit#heading=h.mfzrrwzcspx2"
             window = open_document_management(self, document_service, default_url)
             if window:
                 self.activity_log.add_entry("📄 Открыто управление документами")
+                self.logger.info("✅ Окно управления документами открыто успешно")
             return window
                 
         except Exception as e:
-            self.logger.error(f"Ошибка при открытии окна управления документами: {e}")
-            messagebox.showerror("Ошибка", f"Не удалось открыть окно управления документами: {e}")
+            self.logger.error(f"❌ Ошибка при открытии окна управления документами: {e}")
+            import traceback
+            self.logger.error(f"❌ Полная трассировка: {traceback.format_exc()}")
+            messagebox.showerror("Ошибка", f"Не удалось открыть окно управления документами:\n{str(e)}")
 
     @handle_ui_errors("открытие окна приглашения в Asana")
     def open_asana_invite(self):

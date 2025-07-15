@@ -7,6 +7,7 @@ import tkinter as tk
 from typing import Optional, Dict, Callable
 
 from ..ui_components import ModernColors, ModernButton
+from ..icons import READY_LABELS
 
 
 class MainToolbar(tk.Frame):
@@ -37,7 +38,7 @@ class MainToolbar(tk.Frame):
         # Основные действия
         ModernButton(
             top_buttons_frame,
-            text='👥 Сотрудники',
+            text=READY_LABELS['employees_section'],
             command=self.callbacks.get('employee_list', self._no_callback),
             style='primary',
             font=('Arial', 9)
@@ -45,7 +46,7 @@ class MainToolbar(tk.Frame):
         
         ModernButton(
             top_buttons_frame,
-            text='➕ Создать',
+            text=READY_LABELS['create_user'],
             command=self.callbacks.get('create_user', self._no_callback),
             style='success',
             font=('Arial', 9)
@@ -53,7 +54,7 @@ class MainToolbar(tk.Frame):
         
         ModernButton(
             top_buttons_frame,
-            text='✏️ Редактировать',
+            text=READY_LABELS['edit_user'],
             command=self.callbacks.get('edit_user', self._no_callback),
             style='secondary',
             font=('Arial', 9)
@@ -75,7 +76,7 @@ class MainToolbar(tk.Frame):
         # Группы и календари
         ModernButton(
             bottom_buttons_frame,
-            text='👥 Группы',
+            text=READY_LABELS['groups_section'],
             command=self.callbacks.get('groups', self._no_callback),
             style='info',
             font=('Arial', 9)
@@ -83,7 +84,7 @@ class MainToolbar(tk.Frame):
         
         ModernButton(
             bottom_buttons_frame,
-            text='🎯 SPUTNIK',
+            text=READY_LABELS['sputnik_section'],
             command=self.callbacks.get('sputnik_calendar', self._no_callback),
             style='warning',
             font=('Arial', 9, 'bold')
@@ -91,7 +92,7 @@ class MainToolbar(tk.Frame):
         
         ModernButton(
             bottom_buttons_frame,
-            text='📅 Календари',
+            text=READY_LABELS['calendars_section'],
             command=self.callbacks.get('calendars', self._no_callback),
             style='primary',
             font=('Arial', 9)
@@ -99,7 +100,7 @@ class MainToolbar(tk.Frame):
         
         ModernButton(
             bottom_buttons_frame,
-            text='📄 Документы',
+            text=READY_LABELS['documents_section'],
             command=self.callbacks.get('documents', self._no_callback),
             style='info',
             font=('Arial', 9)

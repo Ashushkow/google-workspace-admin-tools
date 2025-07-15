@@ -7,9 +7,9 @@ class MainWindowConfig:
     
     # Основные параметры окна
     TITLE = 'Admin Team Tools v2.0 - Управление пользователями Google Workspace'
-    GEOMETRY = '750x500'
-    MIN_WIDTH = 600
-    MIN_HEIGHT = 400
+    GEOMETRY = '600x400'
+    MIN_WIDTH = 500
+    MIN_HEIGHT = 350
     
     # Временные задержки (в миллисекундах)
     DELAYED_INIT_DELAY = 1000

@@ -50,7 +50,7 @@ class AsanaInviteWindow(tk.Toplevel):
         self.entry_name.grid(row=2, column=1, padx=5)
         
         self.btn_invite = tk.Button(
-            self, text='Отправить приглашение', command=self.send_invite,
+            self, text='📤 Отправить приглашение', command=self.send_invite,
             bg='#4caf50', fg='white', font=('Arial', 11, 'bold'), 
             activebackground='#388e3c')
         self.btn_invite.grid(row=3, column=0, columnspan=2, pady=15, ipadx=10, ipady=2)
@@ -61,7 +61,7 @@ class AsanaInviteWindow(tk.Toplevel):
         self.txt_result.config(state=tk.DISABLED)
         
         self.btn_close = tk.Button(
-            self, text='Закрыть', command=self.destroy,
+            self, text='❌ Закрыть', command=self.destroy,
             bg='#e57373', fg='white', font=('Arial', 10, 'bold'), 
             activebackground='#b71c1c')
         self.btn_close.grid(row=5, column=0, columnspan=2, pady=(5, 10), ipadx=10, ipady=1)
@@ -203,12 +203,12 @@ class AddToGroupWindow(tk.Toplevel):
         button_frame.pack(fill='x', padx=20, pady=(10, 20))
         
         ModernButton(
-            button_frame, text='Добавить в группу',
+            button_frame, text='➕ Добавить в группу',
             command=self.add_to_group, style='primary'
         ).pack(side='left', padx=(0, 10))
         
         ModernButton(
-            button_frame, text='Закрыть',
+            button_frame, text='❌ Закрыть',
             command=self.destroy, style='secondary'
         ).pack(side='right')
 
@@ -308,17 +308,17 @@ class ErrorLogWindow(tk.Toplevel):
         button_frame.pack(fill='x', padx=20, pady=(0, 20))
         
         ModernButton(
-            button_frame, text='Обновить',
+            button_frame, text='🔄 Обновить',
             command=self.load_logs, style='primary'
         ).pack(side='left', padx=(0, 10))
         
         ModernButton(
-            button_frame, text='Очистить',
+            button_frame, text='🧹 Очистить',
             command=self.clear_logs, style='secondary'
         ).pack(side='left', padx=(0, 10))
         
         ModernButton(
-            button_frame, text='Закрыть',
+            button_frame, text='❌ Закрыть',
             command=self.destroy, style='secondary'
         ).pack(side='right')
 

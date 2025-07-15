@@ -30,40 +30,17 @@ class ServiceAdapter:
     def _initialize_data(self):
         """Инициализация данных из сервисов"""
         try:
-            # Создаем новый event loop для синхронного выполнения
-            import asyncio
+            # Простая синхронная инициализация без создания новых event loop'ов
+            print("📊 Инициализация данных из сервисов...")
             
-            # Проверяем есть ли уже running loop
-            try:
-                loop = asyncio.get_running_loop()
-                # Если loop уже запущен, планируем выполнение задач
-                import threading
-                import concurrent.futures
-                
-                def run_async_task():
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    try:
-                        new_loop.run_until_complete(self._load_data_async())
-                    finally:
-                        new_loop.close()
-                
-                # Запускаем в отдельном потоке
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(run_async_task)
-                    future.result(timeout=10)  # Ждем максимум 10 секунд
-                    
-            except RuntimeError:
-                # Нет running loop, можем запустить напрямую
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    loop.run_until_complete(self._load_data_async())
-                finally:
-                    loop.close()
-                    
+            # Используем демо-данные по умолчанию для стабильности
+            self._initialize_demo_data()
+            
+            # ФИКС: Откладываем асинхронную загрузку данных до запроса
+            self._data_loaded = False
+            
         except Exception as e:
-            print(f"Ошибка загрузки данных из сервисов, используем демо-данные: {e}")
+            print(f"Ошибка инициализации данных: {e}")
             self._initialize_demo_data()
     
     async def _load_data_async(self):
@@ -305,12 +282,139 @@ class ServiceAdapter:
     @property
     def users(self) -> List[Dict[str, Any]]:
         """Список пользователей в старом формате"""
+        self._ensure_data_loaded()
         return self._users
     
     @property
     def groups(self) -> List[Dict[str, Any]]:
         """Список групп в старом формате"""
+        self._ensure_data_loaded()
         return self._groups
+    
+    def _ensure_data_loaded(self):
+        """Обеспечивает загрузку данных при первом обращении"""
+        if not hasattr(self, '_data_loaded') or not self._data_loaded:
+            try:
+                print("📊 Загрузка всех пользователей из Google Workspace...")
+                from ..auth import get_service
+                service = get_service()
+                
+                # Загружаем ВСЕХ пользователей с пагинацией
+                all_users = []
+                page_token = None
+                page_count = 0
+                
+                while True:
+                    page_count += 1
+                    print(f"  📄 Загружаем страницу пользователей {page_count}...")
+                    
+                    # Запрос с максимальным количеством пользователей на странице
+                    request_params = {
+                        'customer': 'my_customer',
+                        'maxResults': 500,  # Максимум за один запрос
+                        'orderBy': 'email'
+                    }
+                    
+                    if page_token:
+                        request_params['pageToken'] = page_token
+                    
+                    result = service.users().list(**request_params).execute()
+                    page_users = result.get('users', [])
+                    
+                    if page_users:
+                        all_users.extend(page_users)
+                        print(f"    ↳ Получено {len(page_users)} пользователей на странице {page_count}")
+                    
+                    # Проверяем есть ли следующая страница
+                    page_token = result.get('nextPageToken')
+                    if not page_token:
+                        break
+                    
+                    # Защита от бесконечного цикла
+                    if page_count > 50:
+                        print(f"    ⚠️ Остановлено после {page_count} страниц")
+                        break
+                
+                if all_users:
+                    self._users = [
+                        {
+                            'primaryEmail': user.get('primaryEmail', ''),
+                            'name': {'fullName': user.get('name', {}).get('fullName', '')},
+                            'id': user.get('id', ''),
+                            'suspended': user.get('suspended', False),
+                            'orgUnitPath': user.get('orgUnitPath', '/')
+                        }
+                        for user in all_users
+                    ]
+                    
+                    # Сортируем пользователей по email для консистентного порядка
+                    self._users.sort(key=lambda user: user.get('primaryEmail', '').lower())
+                    print(f"✅ Загружено {len(self._users)} пользователей!")
+                else:
+                    print("⚠️ Не удалось загрузить пользователей, используем демо-данные")
+                    self._initialize_demo_data()
+
+                # Загружаем ВСЕ группы с пагинацией
+                print("📊 Загрузка всех групп из Google Workspace...")
+                all_groups = []
+                page_token = None
+                page_count = 0
+                
+                while True:
+                    page_count += 1
+                    print(f"  📄 Загружаем страницу групп {page_count}...")
+                    
+                    request_params = {
+                        'customer': 'my_customer',
+                        'maxResults': 200
+                    }
+                    
+                    if page_token:
+                        request_params['pageToken'] = page_token
+                    
+                    result = service.groups().list(**request_params).execute()
+                    groups = result.get('groups', [])
+                    
+                    if groups:
+                        all_groups.extend(groups)
+                        print(f"    ↳ Найдено групп на странице: {len(groups)}")
+                    
+                    # Проверяем наличие следующей страницы
+                    page_token = result.get('nextPageToken')
+                    if not page_token:
+                        break
+                
+                if all_groups:
+                    self._groups = all_groups
+                    print(f"✅ Загружено {len(self._groups)} групп!")
+                else:
+                    print("⚠️ Не удалось загрузить группы, используем демо-данные")
+                    if not hasattr(self, '_groups') or not self._groups:
+                        self._groups = []
+                
+                self._data_loaded = True
+                print(f"🎉 Загрузка завершена: {len(self._users)} пользователей, {len(self._groups)} групп")
+                
+            except Exception as e:
+                print(f"❌ Ошибка загрузки данных: {e}")
+                self._initialize_demo_data()
+                self._data_loaded = True
+
+    def refresh_data(self):
+        """Принудительно обновляет данные из Google Workspace"""
+        print("🔄 Принудительное обновление данных...")
+        self._data_loaded = False
+        self._ensure_data_loaded()
+    
+    def get_users_count(self) -> int:
+        """Возвращает количество загруженных пользователей"""
+        self._ensure_data_loaded()
+        return len(self._users)
+    
+    def get_groups_count(self) -> int:
+        """Возвращает количество загруженных групп"""
+        self._ensure_data_loaded()
+        return len(self._groups)
 
 
 # Функции для обратной совместимости с API
