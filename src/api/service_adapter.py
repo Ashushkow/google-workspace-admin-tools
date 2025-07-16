@@ -31,16 +31,15 @@ class ServiceAdapter:
         """Инициализация данных из сервисов"""
         try:
             # Простая синхронная инициализация без создания новых event loop'ов
-            print("📊 Инициализация данных из сервисов...")
+            print("📊 Подготовка к загрузке данных...")
             
-            # Используем демо-данные по умолчанию для стабильности
-            self._initialize_demo_data()
-            
-            # ФИКС: Откладываем асинхронную загрузку данных до запроса
+            # НЕ инициализируем демо-данные сразу - только при ошибках
+            # Откладываем всю загрузку данных до первого запроса
             self._data_loaded = False
             
         except Exception as e:
             print(f"Ошибка инициализации данных: {e}")
+            self._demo_fallback_mode = True
             self._initialize_demo_data()
     
     async def _load_data_async(self):
@@ -235,10 +234,12 @@ class ServiceAdapter:
                     self._users.sort(key=lambda user: user.get('primaryEmail', '').lower())
                     print(f"✅ Резервный API загрузил {len(self._users)} пользователей")
                 else:
+                    self._demo_fallback_mode = True
                     self._initialize_demo_data()
                     
             except Exception as fallback_error:
                 print(f"❌ Резервный API тоже не работает: {fallback_error}")
+                self._demo_fallback_mode = True
                 self._initialize_demo_data()
     
     def _initialize_demo_data(self):
@@ -277,7 +278,9 @@ class ServiceAdapter:
             }
         ]
         
-        print(f"Инициализированы демо-данные: {len(self._users)} пользователей, {len(self._groups)} групп")
+        # Логируем только в случае fallback'а на демо-данные
+        if hasattr(self, '_demo_fallback_mode'):
+            print(f"⚠️ Используем резервные демо-данные: {len(self._users)} пользователей, {len(self._groups)} групп")
     
     @property
     def users(self) -> List[Dict[str, Any]]:
@@ -352,6 +355,7 @@ class ServiceAdapter:
                     print(f"✅ Загружено {len(self._users)} пользователей!")
                 else:
                     print("⚠️ Не удалось загрузить пользователей, используем демо-данные")
+                    self._demo_fallback_mode = True
                     self._initialize_demo_data()
 
                 # Загружаем ВСЕ группы с пагинацией
@@ -397,6 +401,7 @@ class ServiceAdapter:
                 
             except Exception as e:
                 print(f"❌ Ошибка загрузки данных: {e}")
+                self._demo_fallback_mode = True
                 self._initialize_demo_data()
                 self._data_loaded = True
 
