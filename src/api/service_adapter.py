@@ -298,39 +298,82 @@ class ServiceAdapter:
         """Обеспечивает загрузку данных при первом обращении"""
         if not hasattr(self, '_data_loaded') or not self._data_loaded:
             try:
+                import time
+                import os
+                start_time = time.time()
+                timeout_seconds = 120  # 2 минуты максимум на загрузку
+                
+                # Проверяем режим быстрой загрузки
+                fast_mode = os.getenv('FAST_LOAD_MODE', 'False').lower() == 'true'
+                if fast_mode:
+                    print("🚀 Быстрый режим: используем демо-данные")
+                    self._demo_fallback_mode = True
+                    self._initialize_demo_data()
+                    self._data_loaded = True
+                    return
+                
                 print("📊 Загрузка всех пользователей из Google Workspace...")
-                from ..auth import get_service
-                service = get_service()
+                
+                # Попытка получить сервис с таймаутом
+                try:
+                    from ..auth import get_service
+                    service = get_service()
+                    print("✅ Авторизация успешна!")
+                except (TimeoutError, Exception) as e:
+                    print(f"❌ Ошибка авторизации: {e}")
+                    print("🔄 Переключение на демо-данные...")
+                    self._demo_fallback_mode = True
+                    self._initialize_demo_data()
+                    self._data_loaded = True
+                    return
                 
                 # Загружаем ВСЕХ пользователей с пагинацией
                 all_users = []
                 page_token = None
                 page_count = 0
+                max_user_pages = 30  # Максимум страниц для пользователей
                 
-                while True:
+                while page_count < max_user_pages:
+                    # Проверяем тайм-аут
+                    if time.time() - start_time > timeout_seconds:
+                        print("⏰ Превышен тайм-аут загрузки, переключение на демо-данные")
+                        self._demo_fallback_mode = True
+                        self._initialize_demo_data()
+                        self._data_loaded = True
+                        return
+                    
                     page_count += 1
                     print(f"  📄 Загружаем страницу пользователей {page_count}...")
                     
-                    # Запрос с максимальным количеством пользователей на странице
-                    request_params = {
-                        'customer': 'my_customer',
-                        'maxResults': 500,  # Максимум за один запрос
-                        'orderBy': 'email'
-                    }
-                    
-                    if page_token:
-                        request_params['pageToken'] = page_token
-                    
-                    result = service.users().list(**request_params).execute()
-                    page_users = result.get('users', [])
-                    
-                    if page_users:
-                        all_users.extend(page_users)
-                        print(f"    ↳ Получено {len(page_users)} пользователей на странице {page_count}")
-                    
-                    # Проверяем есть ли следующая страница
-                    page_token = result.get('nextPageToken')
-                    if not page_token:
+                    try:
+                        # Запрос с максимальным количеством пользователей на странице
+                        request_params = {
+                            'customer': 'my_customer',
+                            'maxResults': 500,  # Максимум за один запрос
+                            'orderBy': 'email'
+                        }
+                        
+                        if page_token:
+                            request_params['pageToken'] = page_token
+                        
+                        result = service.users().list(**request_params).execute()
+                        page_users = result.get('users', [])
+                        
+                        if page_users:
+                            all_users.extend(page_users)
+                            print(f"    ↳ Получено {len(page_users)} пользователей на странице {page_count} (всего: {len(all_users)})")
+                        else:
+                            print(f"    ⚠️ Страница {page_count} пуста, завершаем загрузку пользователей")
+                            break
+                        
+                        # Проверяем есть ли следующая страница
+                        page_token = result.get('nextPageToken')
+                        if not page_token:
+                            print(f"    🏁 Достигнута последняя страница пользователей")
+                            break
+                            
+                    except Exception as user_page_error:
+                        print(f"    ❌ Ошибка загрузки страницы пользователей {page_count}: {user_page_error}")
                         break
                     
                     # Защита от бесконечного цикла
@@ -359,34 +402,61 @@ class ServiceAdapter:
                     self._initialize_demo_data()
 
                 # Загружаем ВСЕ группы с пагинацией
+                # Проверяем, не потратили ли мы уже слишком много времени на пользователей
+                elapsed_time = time.time() - start_time
+                if elapsed_time > timeout_seconds * 0.7:  # Если потратили больше 70% времени
+                    print(f"⏰ Загрузка пользователей заняла {elapsed_time:.1f}с, пропускаем группы")
+                    self._groups = []
+                    self._data_loaded = True
+                    print(f"🎉 Загрузка завершена: {len(self._users)} пользователей, 0 групп (тайм-аут)")
+                    return
+                
                 print("📊 Загрузка всех групп из Google Workspace...")
                 all_groups = []
                 page_token = None
                 page_count = 0
+                max_pages = 50  # Защита от бесконечного цикла
                 
-                while True:
+                while page_count < max_pages:
+                    # Проверяем тайм-аут
+                    if time.time() - start_time > timeout_seconds:
+                        print("⏰ Превышен тайм-аут загрузки групп, завершаем операцию")
+                        break
+                    
                     page_count += 1
                     print(f"  📄 Загружаем страницу групп {page_count}...")
                     
-                    request_params = {
-                        'customer': 'my_customer',
-                        'maxResults': 200
-                    }
-                    
-                    if page_token:
-                        request_params['pageToken'] = page_token
-                    
-                    result = service.groups().list(**request_params).execute()
-                    groups = result.get('groups', [])
-                    
-                    if groups:
-                        all_groups.extend(groups)
-                        print(f"    ↳ Найдено групп на странице: {len(groups)}")
-                    
-                    # Проверяем наличие следующей страницы
-                    page_token = result.get('nextPageToken')
-                    if not page_token:
+                    try:
+                        request_params = {
+                            'customer': 'my_customer',
+                            'maxResults': 200
+                        }
+                        
+                        if page_token:
+                            request_params['pageToken'] = page_token
+                        
+                        result = service.groups().list(**request_params).execute()
+                        groups = result.get('groups', [])
+                        
+                        if groups:
+                            all_groups.extend(groups)
+                            print(f"    ↳ Найдено групп на странице: {len(groups)}")
+                        else:
+                            print(f"    ⚠️ Страница {page_count} пуста, завершаем загрузку")
+                            break
+                        
+                        # Проверяем наличие следующей страницы
+                        page_token = result.get('nextPageToken')
+                        if not page_token:
+                            print(f"    🏁 Достигнута последняя страница")
+                            break
+                            
+                    except Exception as page_error:
+                        print(f"    ❌ Ошибка загрузки страницы {page_count}: {page_error}")
                         break
+                
+                if page_count >= max_pages:
+                    print(f"    ⚠️ Остановлено после {max_pages} страниц (защита от зацикливания)")
                 
                 if all_groups:
                     self._groups = all_groups
@@ -397,7 +467,9 @@ class ServiceAdapter:
                         self._groups = []
                 
                 self._data_loaded = True
-                print(f"🎉 Загрузка завершена: {len(self._users)} пользователей, {len(self._groups)} групп")
+                end_time = time.time()
+                total_time = end_time - start_time
+                print(f"🎉 Загрузка завершена за {total_time:.1f}с: {len(self._users)} пользователей, {len(self._groups)} групп")
                 
             except Exception as e:
                 print(f"❌ Ошибка загрузки данных: {e}")

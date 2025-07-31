@@ -50,7 +50,7 @@ def user_exists(service: Any, email: str) -> Optional[bool]:
 
 def create_user(service: Any, email: str, first_name: str, last_name: str, 
                 password: str, secondary_email: Optional[str] = None, 
-                phone: Optional[str] = None) -> str:
+                phone: Optional[str] = None, org_unit_path: Optional[str] = None) -> str:
     """
     Создаёт нового пользователя в домене.
     
@@ -62,6 +62,7 @@ def create_user(service: Any, email: str, first_name: str, last_name: str,
         password: Пароль пользователя
         secondary_email: Дополнительный email (опционально)
         phone: Номер телефона (опционально)
+        org_unit_path: Путь к организационному подразделению (опционально, по умолчанию "/")
         
     Returns:
         Строка с результатом операции
@@ -80,7 +81,8 @@ def create_user(service: Any, email: str, first_name: str, last_name: str,
                 'givenName': first_name,
                 'familyName': last_name
             },
-            'password': password
+            'password': password,
+            'orgUnitPath': org_unit_path or '/'  # По умолчанию корневое подразделение
         }
         
         # Добавляем дополнительные поля если указаны
@@ -94,7 +96,8 @@ def create_user(service: Any, email: str, first_name: str, last_name: str,
         # Очищаем кэш пользователей для обновления
         data_cache.clear_cache()
         
-        return f"Пользователь создан: {user['primaryEmail']}"
+        org_display = org_unit_path or '/'
+        return f"Пользователь создан: {user['primaryEmail']} в подразделении {org_display}"
         
     except Exception as e:
         print(f"[create_user] Exception: {e}")

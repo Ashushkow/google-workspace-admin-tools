@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Admin Team Tools v2.0.8 - Google Workspace Management
+Admin Team Tools v2.1.0 - Google Workspace Management
 Приоритет: OAuth 2.0 авторизация для безопасного интерактивного управления
 """
 
 import sys
 import os
 import asyncio
+import tracemalloc
 from pathlib import Path
+
+# Включаем tracemalloc для отладки
+tracemalloc.start()
 
 # Добавляем src в Python path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
@@ -21,7 +25,7 @@ from src.config.enhanced_config import config
 def show_startup_banner():
     """Показывает стартовый баннер с информацией об OAuth 2.0"""
     print("=" * 70)
-    print("🚀 ADMIN TEAM TOOLS v2.0.8")
+    print("🚀 ADMIN TEAM TOOLS v2.1.0")
     print("📊 Google Workspace Management System")
     print("=" * 70)
     print("🔐 Приоритет авторизации: OAuth 2.0 (интерактивная)")
@@ -75,12 +79,23 @@ async def main() -> int:
 
 
 def cli_main():
-    """Синхронная точка входа для CLI"""
+    """Синхронная точка входа для приложения"""
     try:
         # Показываем стартовый баннер
         show_startup_banner()
         
-        # Запуск асинхронного приложения
+        # Настройка обработки исключений Tkinter
+        import tkinter as tk
+        def handle_tkinter_error(exc, val, tb):
+            if isinstance(val, tk.TclError) and "invalid command name" in str(val):
+                # Игнорируем ошибки закрытых виджетов
+                return
+            # Для других ошибок выводим стандартное сообщение
+            sys.__excepthook__(exc, val, tb)
+        
+        sys.excepthook = handle_tkinter_error
+        
+        # Запуск приложения (всегда в GUI режиме)
         return asyncio.run(main())
         
     except Exception as e:

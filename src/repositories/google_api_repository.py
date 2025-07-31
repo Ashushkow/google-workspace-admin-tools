@@ -10,7 +10,13 @@ from .interfaces import IUserRepository, IGroupRepository, IOrgUnitRepository
 from ..core.di_container import service
 from ..api.google_api_client import GoogleAPIClient
 from ..config.enhanced_config import config
+from ..utils.group_verification import GroupChangeVerifier, GroupOperationMonitor
 import logging
+
+try:
+    from googleapiclient.errors import HttpError
+except ImportError:
+    HttpError = Exception
 
 
 @service(singleton=True)
@@ -296,59 +302,296 @@ class GoogleGroupRepository(IGroupRepository):
                 self.logger.error(f"🔍 HTTP статус: {e.resp.status}")
                 self.logger.error(f"🔍 Ответ сервера: {e.content}")
             return False
+
+
+@service(singleton=True)
+class GoogleGroupRepository(IGroupRepository):
+    """Репозиторий групп Google Workspace"""
     
-    async def remove_member(self, group_email: str, user_email: str) -> bool:
-        """Удалить участника из группы"""
-        await self._ensure_initialized()
-        self.logger.info(f"Удаление {user_email} из группы {group_email} (заглушка)")
-        # TODO: Реализовать через Google API
-        return True
+    def __init__(self):
         self.logger = logging.getLogger(__name__)
+        self.client = GoogleAPIClient(config.settings.google_application_credentials)
+        self._initialized = False
+    
+    async def _ensure_initialized(self):
+        """Убедиться что клиент инициализирован"""
+        if not self._initialized:
+            self._initialized = self.client.initialize()
+            if not self._initialized:
+                self.logger.warning("Google API клиент не инициализирован, используем заглушки")
     
     async def get_all(self) -> List[Group]:
         """Получить все группы"""
-        # TODO: Реализовать через Google API
-        self.logger.info("Получение всех групп (заглушка)")
-        return []
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.info("API недоступен, возвращаем пустой список групп")
+            return []
+        
+        try:
+            # Получаем группы через Google API
+            api_groups = self.client.get_groups()
+            groups = []
+            
+            for api_group in api_groups:
+                group = Group(
+                    group_id=api_group.get('id', ''),
+                    email=api_group.get('email', ''),
+                    name=api_group.get('name', ''),
+                    description=api_group.get('description', ''),
+                    members_count=api_group.get('directMembersCount', 0)
+                )
+                groups.append(group)
+            
+            self.logger.info(f"Получено {len(groups)} групп из Google API")
+            return groups
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка получения групп: {e}")
+            return []
     
     async def get_by_email(self, email: str) -> Optional[Group]:
         """Получить группу по email"""
-        # TODO: Реализовать через Google API
-        self.logger.info(f"Получение группы {email} (заглушка)")
-        return None
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.info(f"API недоступен, поиск группы {email} недоступен")
+            return None
+        
+        try:
+            # Поиск через Google API - получаем все группы и ищем нужную
+            # В реальном API можно было бы искать напрямую, но используем существующий метод
+            all_groups = await self.get_all()
+            for group in all_groups:
+                if group.email.lower() == email.lower():
+                    return group
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка поиска группы {email}: {e}")
+            return None
     
     async def create(self, group: Group) -> Group:
         """Создать группу"""
-        # TODO: Реализовать через Google API
-        self.logger.info(f"Создание группы {group.email} (заглушка)")
-        return group
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.warning(f"API недоступен, создание группы {group.email} невозможно")
+            return group
+        
+        try:
+            # Создание группы через Google API будет реализовано позже
+            self.logger.info(f"Создание группы {group.email} (функциональность будет добавлена)")
+            return group
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка создания группы {group.email}: {e}")
+            raise e
     
     async def update(self, group: Group) -> Group:
         """Обновить группу"""
-        # TODO: Реализовать через Google API
-        self.logger.info(f"Обновление группы {group.email} (заглушка)")
-        return group
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.warning(f"API недоступен, обновление группы {group.email} невозможно")
+            return group
+        
+        try:
+            # Обновление группы через Google API будет реализовано позже
+            self.logger.info(f"Обновление группы {group.email} (функциональность будет добавлена)")
+            return group
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка обновления группы {group.email}: {e}")
+            raise e
     
     async def delete(self, email: str) -> bool:
         """Удалить группу"""
-        # TODO: Реализовать через Google API
-        self.logger.info(f"Удаление группы {email} (заглушка)")
-        return True
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.warning(f"API недоступен, удаление группы {email} невозможно")
+            return False
+        
+        try:
+            # Удаление группы через Google API будет реализовано позже
+            self.logger.info(f"Удаление группы {email} (функциональность будет добавлена)")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Ошибка удаления группы {email}: {e}")
+            return False
     
-    async def add_member(self, group_email: str, member_email: str) -> bool:
-        """Добавить участника в группу"""
-        # TODO: Реализовать через Google API
-        self.logger.info(f"Добавление {member_email} в группу {group_email} (заглушка)")
-        return True
+    async def add_member(self, group_email: str, member_email: str, verify: bool = True) -> bool:
+        """
+        Добавить участника в группу с опциональной проверкой
+        
+        Args:
+            group_email: Email группы
+            member_email: Email участника для добавления
+            verify: Проверить ли применение изменений
+            
+        Returns:
+            True если операция успешна
+        """
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.warning(f"API недоступен, добавление {member_email} в группу {group_email} невозможно")
+            return False
+        
+        try:
+            # Мониторим время выполнения операции
+            with self.monitor.time_operation("add_member", group_email, member_email):
+                # Добавляем участника через Google API
+                result = self.client.add_group_member(group_email, member_email)
+                
+                if result:
+                    self.logger.info(f"✅ Участник {member_email} успешно добавлен в группу {group_email}")
+                    
+                    # Проверяем применение изменений, если требуется
+                    if verify and self.verifier:
+                        self.logger.info(f"🔍 Проверяем применение изменений для {member_email} в группе {group_email}")
+                        verification_success = self.verifier.verify_member_addition(
+                            group_email, member_email,
+                            max_retries=3, retry_delay=5
+                        )
+                        
+                        if not verification_success:
+                            self.logger.warning(f"⚠️ Добавление может быть не завершено для {member_email} в {group_email}")
+                            return False
+                else:
+                    self.logger.error(f"❌ Не удалось добавить участника {member_email} в группу {group_email}")
+                
+                return result
+            
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка добавления участника {member_email} в группу {group_email}: {e}")
+            return False
     
-    async def remove_member(self, group_email: str, member_email: str) -> bool:
-        """Удалить участника из группы"""
-        # TODO: Реализовать через Google API
-        self.logger.info(f"Удаление {member_email} из группы {group_email} (заглушка)")
-        return True
+    async def remove_member(self, group_email: str, member_email: str, verify: bool = True) -> bool:
+        """
+        Удалить участника из группы с опциональной проверкой
+        
+        Args:
+            group_email: Email группы
+            member_email: Email участника для удаления
+            verify: Проверить ли применение изменений
+            
+        Returns:
+            True если операция успешна
+        """
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.warning(f"API недоступен, удаление {member_email} из группы {group_email} невозможно")
+            return False
+        
+        try:
+            # Мониторим время выполнения операции
+            with self.monitor.time_operation("remove_member", group_email, member_email):
+                # Удаляем участника через Google API
+                result = self.client.remove_group_member(group_email, member_email)
+                
+                if result:
+                    self.logger.info(f"✅ Участник {member_email} успешно удален из группы {group_email}")
+                    
+                    # Проверяем применение изменений, если требуется
+                    if verify and self.verifier:
+                        self.logger.info(f"🔍 Проверяем применение изменений для {member_email} в группе {group_email}")
+                        verification_success = self.verifier.verify_member_removal(
+                            group_email, member_email,
+                            max_retries=3, retry_delay=5
+                        )
+                        
+                        if not verification_success:
+                            self.logger.warning(f"⚠️ Удаление может быть не завершено для {member_email} из {group_email}")
+                            return False
+                else:
+                    self.logger.error(f"❌ Не удалось удалить участника {member_email} из группы {group_email}")
+                
+                return result
+            
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка удаления участника {member_email} из группы {group_email}: {e}")
+            return False
     
     async def get_members(self, group_email: str) -> List[str]:
         """Получить участников группы"""
-        # TODO: Реализовать через Google API
-        self.logger.info(f"Получение участников группы {group_email} (заглушка)")
-        return []
+        await self._ensure_initialized()
+        
+        if not self._initialized:
+            self.logger.warning(f"API недоступен, получение участников группы {group_email} невозможно")
+            return []
+        
+        try:
+            # Получаем участников через Google API
+            api_members = self.client.get_group_members(group_email)
+            
+            # Извлекаем email адреса
+            member_emails = []
+            for member in api_members:
+                email = member.get('email', '')
+                if email:
+                    member_emails.append(email)
+            
+            self.logger.info(f"Получено {len(member_emails)} участников группы {group_email}")
+            return member_emails
+            
+        except Exception as e:
+            self.logger.error(f"❌ Ошибка получения участников группы {group_email}: {e}")
+            return []
+    
+    def get_operation_statistics(self) -> Dict[str, Any]:
+        """
+        Получить статистику операций с группами
+        
+        Returns:
+            Словарь со статистикой времени выполнения операций
+        """
+        return self.monitor.get_average_times()
+    
+    def get_recent_operations(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Получить последние операции
+        
+        Args:
+            limit: Максимальное количество операций
+            
+        Returns:
+            Список последних операций
+        """
+        operations = self.monitor.get_recent_operations(limit)
+        return [
+            {
+                'operation': op.operation,
+                'group_email': op.group_email,
+                'user_email': op.user_email,
+                'duration': round(op.duration, 2),
+                'success': op.success,
+                'timestamp': op.start_time
+            }
+            for op in operations
+        ]
+    
+    def clear_operation_history(self):
+        """Очистить историю операций"""
+        self.monitor.clear_history()
+        self.logger.info("История операций с группами очищена")
+    
+    async def get_group_propagation_status(self, group_email: str) -> Dict[str, Any]:
+        """
+        Получить статус распространения изменений группы
+        
+        Args:
+            group_email: Email группы
+            
+        Returns:
+            Словарь с информацией о статусе группы
+        """
+        await self._ensure_initialized()
+        
+        if not self._initialized or not self.verifier:
+            return {'error': 'API недоступен или верификатор не инициализирован'}
+        
+        return self.verifier.get_propagation_status(group_email)

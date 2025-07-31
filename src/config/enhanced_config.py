@@ -26,7 +26,7 @@ class AppSettings(BaseSettings):
     
     # Application
     app_name: str = "Admin Team Tools"
-    app_version: str = "2.0.8"
+    app_version: str = "2.1.0"
     app_debug: bool = False
     app_log_level: str = "INFO"
     cli_mode: bool = False
@@ -103,10 +103,12 @@ class GoogleAPIConfig:
     scopes: list = field(default_factory=lambda: [
         'https://www.googleapis.com/auth/admin.directory.user',
         'https://www.googleapis.com/auth/admin.directory.group',
+        'https://www.googleapis.com/auth/admin.directory.group.member',
         'https://www.googleapis.com/auth/admin.directory.orgunit',
         'https://www.googleapis.com/auth/admin.directory.domain.readonly',
         'https://www.googleapis.com/auth/calendar',
-        'https://www.googleapis.com/auth/drive'
+        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/gmail.send'  # Для отправки приветственных писем
     ])
     credentials_file: str = "credentials.json"
     token_file: str = "token.pickle"

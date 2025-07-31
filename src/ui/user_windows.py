@@ -4,13 +4,14 @@
 """
 
 import tkinter as tk
-from tkinter import messagebox, scrolledtext
+from tkinter import messagebox, scrolledtext, ttk
 import string
 import random
 from typing import Any, Optional
 
 from .ui_components import ModernColors, center_window
 from ..api.users_api import create_user, update_user, delete_user, get_user_list
+from ..api.orgunits_api import list_orgunits, format_orgunits_for_combobox, get_orgunit_path_from_display_name
 
 
 class CreateUserWindow(tk.Toplevel):
@@ -21,7 +22,7 @@ class CreateUserWindow(tk.Toplevel):
     def __init__(self, master, service: Any, on_created: Optional[callable] = None):
         super().__init__(master)
         self.title('Создать пользователя')
-        self.geometry('700x540')
+        self.geometry('700x600')  # Увеличиваем высоту для нового поля
         self.resizable(False, False)
         self.service = service
         self.on_created = on_created
@@ -29,8 +30,26 @@ class CreateUserWindow(tk.Toplevel):
         if master:
             center_window(self, master)
 
+        # Загружаем список OU
+        self.orgunits = []
+        self.orgunit_display_names = []
+        self._load_orgunits()
+
         self._create_widgets()
         self._bind_events()
+
+    def _load_orgunits(self):
+        """Загружает список организационных подразделений"""
+        try:
+            self.orgunits = list_orgunits(self.service)
+            self.orgunit_display_names = format_orgunits_for_combobox(self.orgunits)
+            if not self.orgunit_display_names:
+                # Если не удалось загрузить OU, добавляем только корневое
+                self.orgunit_display_names = ["/ (Root Organization)"]
+        except Exception as e:
+            print(f"Ошибка загрузки OU: {e}")
+            # В случае ошибки показываем только корневое подразделение
+            self.orgunit_display_names = ["/ (Root Organization)"]
 
     def _create_widgets(self):
         """Создает виджеты окна"""
@@ -68,34 +87,43 @@ class CreateUserWindow(tk.Toplevel):
         self.entry_phone.grid(row=4, column=1, padx=8)
         self._add_validation(self.entry_phone, 20)
 
+        # Organizational Unit
+        tk.Label(self, text='Подразделение (OU):', font=('Arial', 11)).grid(
+            row=5, column=0, sticky='e', padx=16, pady=8)
+        self.combo_orgunit = ttk.Combobox(self, width=47, font=('Arial', 11), state='readonly')
+        self.combo_orgunit['values'] = self.orgunit_display_names
+        if self.orgunit_display_names:
+            self.combo_orgunit.current(0)  # Выбираем первый элемент (корневое OU) по умолчанию
+        self.combo_orgunit.grid(row=5, column=1, padx=8, sticky='w')
+
         # Password
         tk.Label(self, text='Password:', font=('Arial', 11)).grid(
-            row=5, column=0, sticky='e', padx=16, pady=8)
+            row=6, column=0, sticky='e', padx=16, pady=8)
         self.entry_pass = tk.Entry(self, width=36, font=('Arial', 11), show='*')
-        self.entry_pass.grid(row=5, column=1, padx=8, sticky='w')
+        self.entry_pass.grid(row=6, column=1, padx=8, sticky='w')
         self._add_validation(self.entry_pass, 32)
 
         # Generate Password Button
         self.btn_gen_pass = tk.Button(self, text='🔑 Сгенерировать', 
                                      command=self.generate_password, 
                                      font=('Arial', 9), width=16)
-        self.btn_gen_pass.grid(row=5, column=1, padx=8, sticky='e')
+        self.btn_gen_pass.grid(row=6, column=1, padx=8, sticky='e')
 
         # Create Button
         self.btn_create = tk.Button(self, text='➕ Создать', command=self.create_user, 
                                    font=('Arial', 11, 'bold'), width=18)
-        self.btn_create.grid(row=6, column=0, columnspan=2, pady=18)
+        self.btn_create.grid(row=7, column=0, columnspan=2, pady=18)
 
         # Result Text Area
         self.txt_result = scrolledtext.ScrolledText(self, width=80, height=5, 
                                                    wrap=tk.WORD, font=('Arial', 10))
-        self.txt_result.grid(row=7, column=0, columnspan=2, padx=16, pady=7)
+        self.txt_result.grid(row=8, column=0, columnspan=2, padx=16, pady=7)
         self.txt_result.config(state=tk.DISABLED)
 
         # Close Button
         self.btn_close = tk.Button(self, text='❌ Закрыть', command=self.destroy, 
                                   font=('Arial', 10), width=18)
-        self.btn_close.grid(row=8, column=0, columnspan=2, pady=(2, 12))
+        self.btn_close.grid(row=9, column=0, columnspan=2, pady=(2, 12))
 
     def _add_validation(self, entry: tk.Entry, maxlen: int):
         """Добавляет валидацию длины для поля ввода"""
@@ -141,6 +169,10 @@ class CreateUserWindow(tk.Toplevel):
         phone = self.entry_phone.get().strip()
         password = self.entry_pass.get().strip()
         
+        # Получаем выбранное OU
+        selected_ou_display = self.combo_orgunit.get()
+        org_unit_path = get_orgunit_path_from_display_name(selected_ou_display, self.orgunits)
+        
         # Проверка на пробелы в начале или конце
         for field, value in [
             ('First Name', first_name), 
@@ -161,10 +193,10 @@ class CreateUserWindow(tk.Toplevel):
                 'Заполните обязательные поля (First Name, Last Name, Email, Password)!')
             return
         
-        # Создаем пользователя
+        # Создаем пользователя с указанием OU
         result = create_user(
             self.service, email, first_name, last_name, password,
-            secondary_email=secondary_email, phone=phone
+            secondary_email=secondary_email, phone=phone, org_unit_path=org_unit_path
         )
         
         # Отображаем результат

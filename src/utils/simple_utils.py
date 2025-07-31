@@ -4,6 +4,7 @@
 Объединяет только самые необходимые функции.
 """
 
+import asyncio
 import threading
 import time
 import functools
@@ -12,17 +13,59 @@ from datetime import datetime
 from googleapiclient.errors import HttpError
 from tkinter import messagebox
 import tkinter as tk
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleAsyncManager:
-    """Простой менеджер для предотвращения блокировки UI при API запросах"""
+    """Простой менеджер для выполнения async функций из tkinter"""
     
     def __init__(self):
         self.results = []
     
-    def run_async(self, func: Callable, callback: Optional[Callable] = None, 
+    def run_async(self, coro_func: Callable, callback: Optional[Callable] = None, 
                   error_callback: Optional[Callable] = None, *args, **kwargs):
-        """Запускает функцию в отдельном потоке"""
+        """Запускает корутину в отдельном потоке с event loop"""
+        def worker():
+            try:
+                # Создаем новый event loop для потока
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    # Если функция - это корутина-функция, вызываем её
+                    if asyncio.iscoroutinefunction(coro_func):
+                        result = loop.run_until_complete(coro_func(*args, **kwargs))
+                    else:
+                        # Если это обычная функция, просто вызываем
+                        result = coro_func(*args, **kwargs)
+                    
+                    if callback:
+                        callback(result)
+                        
+                except Exception as e:
+                    logger.error(f"Ошибка в async операции: {e}")
+                    if error_callback:
+                        error_callback(e)
+                    else:
+                        print(f"Ошибка в async операции: {e}")
+                finally:
+                    loop.close()
+                    
+            except Exception as e:
+                logger.error(f"Критическая ошибка async менеджера: {e}")
+                if error_callback:
+                    error_callback(e)
+                else:
+                    print(f"Ошибка в async операции: {e}")
+        
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+        
+    def run_sync_in_thread(self, func: Callable, callback: Optional[Callable] = None, 
+                          error_callback: Optional[Callable] = None, *args, **kwargs):
+        """Запускает обычную функцию в отдельном потоке (совместимость)"""
         def worker():
             try:
                 result = func(*args, **kwargs)
@@ -32,7 +75,7 @@ class SimpleAsyncManager:
                 if error_callback:
                     error_callback(e)
                 else:
-                    print(f"Ошибка в async операции: {e}")
+                    print(f"Ошибка в sync операции: {e}")
         
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()

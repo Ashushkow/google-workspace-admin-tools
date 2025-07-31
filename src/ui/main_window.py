@@ -19,6 +19,7 @@ from .additional_windows import AsanaInviteWindow, ErrorLogWindow
 from .group_management import GroupManagementWindow
 from .calendar_management import open_calendar_management
 from .sputnik_calendar_ui import open_sputnik_calendar_window
+from .freeipa_management import open_freeipa_management
 from ..api.users_api import get_user_list
 from ..api.service_adapter import ServiceAdapter
 from ..api.groups_api import list_groups
@@ -262,7 +263,8 @@ class AdminToolsMainWindow(tk.Tk):
             'sputnik_calendar': self.open_sputnik_calendar,
             'calendars': self.open_calendar_management,
             'documents': self.open_document_management,
-            'asana': self.open_asana_invite
+            'asana': self.open_asana_invite,
+            'freeipa': self.open_freeipa_management
         }
         
         self.toolbar = MainToolbar(self, toolbar_callbacks)
@@ -590,6 +592,17 @@ class AdminToolsMainWindow(tk.Tk):
     def open_asana_invite(self):
         """Открытие окна приглашения в Asana"""
         window = AsanaInviteWindow(self)
+
+    @handle_ui_errors("открытие окна управления FreeIPA")
+    def open_freeipa_management(self):
+        """Открытие окна управления FreeIPA"""
+        # Получаем GroupsAPI для передачи в FreeIPA окно
+        from ..api.groups_api import GroupsAPI
+        groups_service = GroupsAPI(self.service) if self.service else None
+        
+        window = open_freeipa_management(self, self.service, groups_service)
+        if window:
+            self.log_activity("🔗 Открыто окно управления FreeIPA")
 
     @handle_ui_errors("открытие окна журнала ошибок")
     def open_error_log(self):

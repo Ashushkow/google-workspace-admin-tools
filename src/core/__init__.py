@@ -4,14 +4,16 @@
 Пакет core содержит основную бизнес-логику приложения.
 """
 
-from .application import Application
+# Убираем импорт Application и сервисов чтобы избежать циклических импортов
+# from .application import Application
 from .domain import User, Group, OrganizationalUnit
-from ..services import UserService, GroupService
+# Убираем импорт сервисов из-за циклического импорта
+# from ..services import UserService, GroupService
 from ..repositories.interfaces import IUserRepository, IGroupRepository
 from .di_container import container, inject, service
 
 __all__ = [
-    'Application',
+    # 'Application',  # временно убрано из-за циклического импорта
     'User', 'Group', 'OrganizationalUnit',
     'UserService', 'GroupService',
     'IUserRepository', 'IGroupRepository',

@@ -74,15 +74,66 @@ def get_oauth2_credentials():
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             # Обновляем истёкший токен
-            creds.refresh(Request())
-        else:
+            try:
+                print("🔄 Обновление токена авторизации...")
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"❌ Ошибка обновления токена: {e}")
+                creds = None
+        
+        if not creds:
             # Инициируем новую авторизацию
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)
+            try:
+                print("🌐 Запуск OAuth 2.0 авторизации...")
+                print("⏰ Браузер должен открыться автоматически в течение 10 секунд")
+                print("📋 Если браузер не открылся, используйте URL из консоли")
+                
+                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+                
+                # Запускаем локальный сервер с таймаутом
+                import threading
+                import time
+                
+                auth_result = [None]  # Используем список для передачи результата
+                auth_error = [None]
+                
+                def run_auth():
+                    try:
+                        auth_result[0] = flow.run_local_server(port=0, timeout_seconds=30)
+                    except Exception as e:
+                        auth_error[0] = e
+                
+                # Запускаем авторизацию в отдельном потоке
+                auth_thread = threading.Thread(target=run_auth)
+                auth_thread.daemon = True
+                auth_thread.start()
+                
+                # Ждем результат с таймаутом
+                auth_thread.join(timeout=35)
+                
+                if auth_thread.is_alive():
+                    print("⏰ Таймаут авторизации (35 сек). Процесс будет остановлен.")
+                    raise TimeoutError("OAuth 2.0 авторизация заняла слишком много времени")
+                
+                if auth_error[0]:
+                    raise auth_error[0]
+                
+                if auth_result[0]:
+                    creds = auth_result[0]
+                    print("✅ OAuth 2.0 авторизация успешна!")
+                else:
+                    raise Exception("Не удалось получить credentials")
+                    
+            except Exception as e:
+                print(f"❌ Ошибка OAuth 2.0 авторизации: {e}")
+                print("💡 Попробуйте использовать Service Account credentials")
+                print("📋 Или проверьте настройки OAuth 2.0 в Google Cloud Console")
+                raise
         
         # Сохраняем токен для будущего использования
-        with open(TOKEN_PICKLE, 'wb') as token:
-            pickle.dump(creds, token)
+        if creds:
+            with open(TOKEN_PICKLE, 'wb') as token:
+                pickle.dump(creds, token)
     
     return creds
 

@@ -22,6 +22,7 @@ class SputnikCalendarWindow(tk.Toplevel):
         super().__init__(master)
         self.master_window = master
         self.calendar_manager = None
+        self.is_window_active = True  # Флаг для отслеживания состояния окна
         
         # Настройка окна
         self.title('📅 Управление календарем SPUTНIK (общий)')
@@ -32,8 +33,31 @@ class SputnikCalendarWindow(tk.Toplevel):
             self.transient(master)
             center_window(self, master)
         
+        # Обработчик закрытия окна
+        self.protocol("WM_DELETE_WINDOW", self.on_window_close)
+        
         self.setup_ui()
         self.initialize_calendar()
+    
+    def on_window_close(self):
+        """Обработчик закрытия окна"""
+        self.is_window_active = False
+        self.destroy()
+    
+    def safe_update_ui(self, update_func):
+        """Безопасное обновление UI с проверкой состояния окна"""
+        if not self.is_window_active:
+            return
+        
+        try:
+            if self.winfo_exists():
+                update_func()
+        except tk.TclError:
+            # Окно было закрыто, игнорируем ошибку
+            self.is_window_active = False
+        except Exception:
+            # Другие ошибки также могут указывать на закрытое окно
+            self.is_window_active = False
     
     def setup_ui(self):
         """Настройка пользовательского интерфейса"""
@@ -242,7 +266,7 @@ class SputnikCalendarWindow(tk.Toplevel):
         """Инициализация календаря в отдельном потоке"""
         def init_worker():
             try:
-                self.status_label.config(text='Подключение к календарю SPUTНIK...')
+                self.safe_update_ui(lambda: self.status_label.config(text='Подключение к календарю SPUTНIK...'))
                 
                 from ..api.sputnik_calendar import create_sputnik_calendar_manager
                 self.calendar_manager = create_sputnik_calendar_manager()
@@ -250,23 +274,23 @@ class SputnikCalendarWindow(tk.Toplevel):
                 if self.calendar_manager:
                     calendar_info = self.calendar_manager.get_calendar_info()
                     
-                    self.after(0, lambda: self.info_label.config(
+                    self.safe_update_ui(lambda: self.info_label.config(
                         text=f'Владелец: {calendar_info.owner if calendar_info else "Неизвестно"}'
                     ))
                     
-                    self.after(0, lambda: self.status_label.config(text='✅ Подключено к календарю SPUTНIK'))
-                    self.after(0, self.load_members)
+                    self.safe_update_ui(lambda: self.status_label.config(text='✅ Подключено к календарю SPUTНIK'))
+                    self.safe_update_ui(self.load_members)
                 else:
-                    self.after(0, lambda: self.status_label.config(text='❌ Ошибка подключения к календарю'))
-                    self.after(0, lambda: messagebox.showerror(
+                    self.safe_update_ui(lambda: self.status_label.config(text='❌ Ошибка подключения к календарю'))
+                    self.safe_update_ui(lambda: messagebox.showerror(
                         "Ошибка",
                         "Не удалось подключиться к календарю SPUTНIK.\n"
                         "Проверьте настройки аутентификации."
                     ))
                     
             except Exception as e:
-                self.after(0, lambda: self.status_label.config(text='❌ Ошибка инициализации'))
-                self.after(0, lambda: messagebox.showerror("Ошибка", f"Ошибка инициализации:\n{str(e)}"))
+                self.safe_update_ui(lambda: self.status_label.config(text='❌ Ошибка инициализации'))
+                self.safe_update_ui(lambda: messagebox.showerror("Ошибка", f"Ошибка инициализации:\n{str(e)}"))
         
         # Запускаем инициализацию в отдельном потоке
         threading.Thread(target=init_worker, daemon=True).start()
@@ -278,52 +302,61 @@ class SputnikCalendarWindow(tk.Toplevel):
         
         def load_worker():
             try:
-                self.after(0, lambda: self.status_label.config(text='Загрузка участников...'))
+                self.safe_update_ui(lambda: self.status_label.config(text='Загрузка участников...'))
                 
                 members = self.calendar_manager.get_members()
                 
-                self.after(0, lambda: self._update_members_list(members))
-                self.after(0, lambda: self.status_label.config(text=f'✅ Загружено участников: {len(members)}'))
+                self.safe_update_ui(lambda: self._update_members_list(members))
+                self.safe_update_ui(lambda: self.status_label.config(text=f'✅ Загружено участников: {len(members)}'))
                 
             except Exception as e:
-                self.after(0, lambda: self.status_label.config(text='❌ Ошибка загрузки'))
-                self.after(0, lambda: messagebox.showerror("Ошибка", f"Ошибка загрузки участников:\n{str(e)}"))
+                self.safe_update_ui(lambda: self.status_label.config(text='❌ Ошибка загрузки'))
+                self.safe_update_ui(lambda: messagebox.showerror("Ошибка", f"Ошибка загрузки участников:\n{str(e)}"))
         
         threading.Thread(target=load_worker, daemon=True).start()
     
     def _update_members_list(self, members):
         """Обновление списка участников в UI"""
-        # Сохраняем текущий выбор
-        selected_items = self.members_tree.selection()
-        selected_emails = []
-        for item in selected_items:
-            values = self.members_tree.item(item)['values']
-            if values:
-                selected_emails.append(values[0])
-        
-        # Очищаем список
-        for item in self.members_tree.get_children():
-            self.members_tree.delete(item)
-        
-        # Добавляем участников
-        for member in members:
-            role_display = self._translate_role(member.role)
-            actions = "Изменить • Удалить"
+        if not self.is_window_active:
+            return
             
-            item_id = self.members_tree.insert('', 'end', values=(
-                member.email,
-                role_display,
-                actions
-            ))
+        try:
+            # Сохраняем текущий выбор
+            selected_items = self.members_tree.selection()
+            selected_emails = []
+            for item in selected_items:
+                values = self.members_tree.item(item)['values']
+                if values:
+                    selected_emails.append(values[0])
             
-            # Восстанавливаем выбор, если email был выбран ранее
-            if member.email in selected_emails:
-                self.members_tree.selection_add(item_id)
-        
-        # Обновляем счетчик
-        self.members_count_label.config(text=f'Участников: {len(members)}')
-        
-        # Применяем текущие фильтры
+            # Очищаем список
+            for item in self.members_tree.get_children():
+                self.members_tree.delete(item)
+            
+            # Добавляем участников
+            for member in members:
+                role_display = self._translate_role(member.role)
+                actions = "Изменить • Удалить"
+                
+                item_id = self.members_tree.insert('', 'end', values=(
+                    member.email,
+                    role_display,
+                    actions
+                ))
+                
+                # Восстанавливаем выбор, если email был выбран ранее
+                if member.email in selected_emails:
+                    self.members_tree.selection_add(item_id)
+            
+            # Обновляем счетчик
+            self.members_count_label.config(text=f'Участников: {len(members)}')
+            
+        except tk.TclError:
+            # Виджет был уничтожен
+            self.is_window_active = False
+        except Exception:
+            # Другие ошибки также могут указывать на проблемы с виджетами
+            self.is_window_active = False
         self.filter_members()
     
     def _translate_role(self, role: str) -> str:
@@ -458,29 +491,29 @@ class SputnikCalendarWindow(tk.Toplevel):
         # Удаляем участников
         def remove_worker():
             try:
-                self.after(0, lambda: self.status_label.config(text='Удаление участников...'))
+                self.safe_update_ui(lambda: self.status_label.config(text='Удаление участников...'))
                 
                 successful = 0
                 for email in emails:
                     if self.calendar_manager.remove_member(email):
                         successful += 1
                 
-                self.after(0, lambda: self.status_label.config(
+                self.safe_update_ui(lambda: self.status_label.config(
                     text=f'✅ Удалено участников: {successful}/{len(emails)}'
                 ))
-                self.after(0, self.refresh_members)
+                self.safe_update_ui(self.refresh_members)
                 
                 if successful == len(emails):
-                    self.after(0, lambda: messagebox.showinfo("Успех", "Все участники успешно удалены"))
+                    self.safe_update_ui(lambda: messagebox.showinfo("Успех", "Все участники успешно удалены"))
                 else:
-                    self.after(0, lambda: messagebox.showwarning(
+                    self.safe_update_ui(lambda: messagebox.showwarning(
                         "Частичный успех",
                         f"Удалено {successful} из {len(emails)} участников"
                     ))
                     
             except Exception as e:
-                self.after(0, lambda: self.status_label.config(text='❌ Ошибка удаления'))
-                self.after(0, lambda: messagebox.showerror("Ошибка", f"Ошибка удаления:\n{str(e)}"))
+                self.safe_update_ui(lambda: self.status_label.config(text='❌ Ошибка удаления'))
+                self.safe_update_ui(lambda: messagebox.showerror("Ошибка", f"Ошибка удаления:\n{str(e)}"))
         
         threading.Thread(target=remove_worker, daemon=True).start()
     
@@ -545,7 +578,7 @@ class SputnikCalendarWindow(tk.Toplevel):
         
         def export_worker():
             try:
-                self.after(0, lambda: self.status_label.config(text='Экспорт участников...'))
+                self.safe_update_ui(lambda: self.status_label.config(text='Экспорт участников...'))
                 
                 members_data = self.calendar_manager.export_members_to_dict()
                 
@@ -556,12 +589,12 @@ class SputnikCalendarWindow(tk.Toplevel):
                 else:
                     self._export_to_csv(members_data, filename)
                 
-                self.after(0, lambda: self.status_label.config(text=f'✅ Экспорт завершен: {filename}'))
-                self.after(0, lambda: messagebox.showinfo("Успех", f"Данные экспортированы в:\n{filename}"))
+                self.safe_update_ui(lambda: self.status_label.config(text=f'✅ Экспорт завершен: {filename}'))
+                self.safe_update_ui(lambda: messagebox.showinfo("Успех", f"Данные экспортированы в:\n{filename}"))
                 
             except Exception as e:
-                self.after(0, lambda: self.status_label.config(text='❌ Ошибка экспорта'))
-                self.after(0, lambda: messagebox.showerror("Ошибка", f"Ошибка экспорта:\n{str(e)}"))
+                self.safe_update_ui(lambda: self.status_label.config(text='❌ Ошибка экспорта'))
+                self.safe_update_ui(lambda: messagebox.showerror("Ошибка", f"Ошибка экспорта:\n{str(e)}"))
         
         threading.Thread(target=export_worker, daemon=True).start()
     
@@ -601,7 +634,7 @@ class SputnikCalendarWindow(tk.Toplevel):
         
         def load_more_worker():
             try:
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text='📋 Загрузка дополнительных пользователей...',
                     fg='blue'
                 ))
@@ -642,19 +675,19 @@ class SputnikCalendarWindow(tk.Toplevel):
                 self.users_cache = sputnik_users
                 
                 # Обновляем UI
-                self.after(0, lambda: self._update_users_list(sputnik_users))
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self._update_users_list(sputnik_users))
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text=f'✅ Загружено {len(sputnik_users)} пользователей (полный список)',
                     fg='green'
                 ))
-                self.after(0, lambda: self.load_more_button.pack_forget())
+                self.safe_update_ui(lambda: self.load_more_button.pack_forget())
                 
             except Exception as e:
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text=f'❌ Ошибка расширенной загрузки: {str(e)[:50]}...',
                     fg='red'
                 ))
-                self.after(0, lambda: self.load_more_button.config(
+                self.safe_update_ui(lambda: self.load_more_button.config(
                     state='normal', 
                     text='📥 Попробовать еще раз'
                 ))
@@ -751,7 +784,7 @@ class SputnikCalendarWindow(tk.Toplevel):
                 success = self.calendar_manager.add_member(email, role, name)
                 
                 if success:
-                    self.after(0, lambda: messagebox.showinfo(
+                    self.safe_update_ui(lambda: messagebox.showinfo(
                         "Успех",
                         f"Пользователь {name} добавлен к календарю SPUTНIK\\n\\n"
                         f"Email: {email}\\n"
@@ -759,10 +792,10 @@ class SputnikCalendarWindow(tk.Toplevel):
                         f"Пользователь получит уведомление о доступе к календарю."
                     ))
                     if self.refresh_callback:
-                        self.after(0, self.refresh_callback)
-                    self.after(0, self.destroy)
+                        self.safe_update_ui(self.refresh_callback)
+                    self.safe_update_ui(self.destroy)
                 else:
-                    self.after(0, lambda: messagebox.showerror(
+                    self.safe_update_ui(lambda: messagebox.showerror(
                         "Ошибка",
                         f"Не удалось добавить пользователя {name} к календарю.\\n\\n"
                         f"Возможные причины:\\n"
@@ -772,7 +805,7 @@ class SputnikCalendarWindow(tk.Toplevel):
                     ))
                     
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror(
+                self.safe_update_ui(lambda: messagebox.showerror(
                     "Ошибка",
                     f"Ошибка добавления пользователя {name}:\\n\\n{str(e)}"
                 ))
@@ -1033,6 +1066,18 @@ class AddSputnikMemberDialog(tk.Toplevel):
         # Используем fallback пользователей
         self._create_fallback_users()
     
+    def safe_update_ui(self, update_func):
+        """Безопасное обновление UI с проверкой состояния окна"""
+        try:
+            if self.winfo_exists():
+                update_func()
+        except tk.TclError:
+            # Окно было закрыто, игнорируем ошибку
+            pass
+        except Exception:
+            # Другие ошибки также могут указывать на закрытое окно
+            pass
+    
     def load_domain_users(self):
         """Загрузка пользователей домена с кэшированием и быстрой отменой"""
         # Если есть кэш, используем его
@@ -1054,18 +1099,18 @@ class AddSputnikMemberDialog(tk.Toplevel):
         def load_worker():
             try:
                 # Обновляем статус загрузки
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text='🔄 Подключение к Google Directory API...',
                     fg='blue'
                 ))
                 
                 # Используем тот же API, что и для календаря
                 if not self.calendar_manager or not self.calendar_manager.calendar_api.credentials:
-                    self.after(0, lambda: self.loading_label.config(
+                    self.safe_update_ui(lambda: self.loading_label.config(
                         text='❌ Календарь не инициализирован',
                         fg='red'
                     ))
-                    self.after(0, lambda: self.cancel_button.pack_forget())
+                    self.safe_update_ui(lambda: self.cancel_button.pack_forget())
                     return
                 
                 # Создаем Directory API сервис используя те же credentials
@@ -1079,7 +1124,7 @@ class AddSputnikMemberDialog(tk.Toplevel):
                     return
                 
                 # Обновляем статус
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text='📋 Загрузка первых 50 пользователей...',
                     fg='blue'
                 ))
@@ -1098,7 +1143,7 @@ class AddSputnikMemberDialog(tk.Toplevel):
                     return
                 
                 # Обновляем статус обработки
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text=f'⚙️ Обработка {len(users)} пользователей...',
                     fg='blue'
                 ))
@@ -1133,26 +1178,26 @@ class AddSputnikMemberDialog(tk.Toplevel):
                 self.users_cache = sputnik_users
                 
                 # Обновляем UI в главном потоке
-                self.after(0, lambda: self._update_users_list(sputnik_users))
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self._update_users_list(sputnik_users))
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text=f'✅ Загружено {len(sputnik_users)} пользователей',
                     fg='green'
                 ))
-                self.after(0, lambda: self.cancel_button.pack_forget())
+                self.safe_update_ui(lambda: self.cancel_button.pack_forget())
                 
                 # Показываем кнопку "Загрузить еще" если загрузили мало
                 if len(sputnik_users) >= 45:  # Показываем если загрузили близко к лимиту
-                    self.after(0, lambda: self.load_more_button.pack(anchor='center'))
+                    self.safe_update_ui(lambda: self.load_more_button.pack(anchor='center'))
                 
             except Exception as e:
                 # Если не удалось загрузить через API, создаем заглушку
                 if not self.loading_cancelled:
-                    self.after(0, lambda: self._create_fallback_users())
-                    self.after(0, lambda: self.loading_label.config(
+                    self.safe_update_ui(lambda: self._create_fallback_users())
+                    self.safe_update_ui(lambda: self.loading_label.config(
                         text=f'⚠️ Используются примеры (API недоступен)',
                         fg='orange'
                     ))
-                    self.after(0, lambda: self.cancel_button.pack_forget())
+                    self.safe_update_ui(lambda: self.cancel_button.pack_forget())
         
         # Запускаем загрузку в отдельном потоке
         self.loading_thread = threading.Thread(target=load_worker, daemon=True)
@@ -1164,7 +1209,7 @@ class AddSputnikMemberDialog(tk.Toplevel):
         
         def load_more_worker():
             try:
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text='📋 Загрузка дополнительных пользователей...',
                     fg='blue'
                 ))
@@ -1205,19 +1250,19 @@ class AddSputnikMemberDialog(tk.Toplevel):
                 self.users_cache = sputnik_users
                 
                 # Обновляем UI
-                self.after(0, lambda: self._update_users_list(sputnik_users))
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self._update_users_list(sputnik_users))
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text=f'✅ Загружено {len(sputnik_users)} пользователей (полный список)',
                     fg='green'
                 ))
-                self.after(0, lambda: self.load_more_button.pack_forget())
+                self.safe_update_ui(lambda: self.load_more_button.pack_forget())
                 
             except Exception as e:
-                self.after(0, lambda: self.loading_label.config(
+                self.safe_update_ui(lambda: self.loading_label.config(
                     text=f'❌ Ошибка расширенной загрузки: {str(e)[:50]}...',
                     fg='red'
                 ))
-                self.after(0, lambda: self.load_more_button.config(
+                self.safe_update_ui(lambda: self.load_more_button.config(
                     state='normal', 
                     text='📥 Попробовать еще раз'
                 ))
@@ -1368,15 +1413,15 @@ class AddSputnikMemberDialog(tk.Toplevel):
                 self.calendar_manager.add_member(email, role)
                 
                 # Обновляем UI в главном потоке
-                self.after(0, lambda: messagebox.showinfo(
+                self.safe_update_ui(lambda: messagebox.showinfo(
                     "Успех", 
                     f"Пользователь {name} успешно добавлен к календарю SPUTНIK"
                 ))
-                self.after(0, self.refresh_callback)
-                self.after(0, self.destroy)
+                self.safe_update_ui(self.refresh_callback)
+                self.safe_update_ui(self.destroy)
                 
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror(
+                self.safe_update_ui(lambda: messagebox.showerror(
                     "Ошибка",
                     f"Ошибка добавления пользователя {name}:\\n\\n{str(e)}"
                 ))

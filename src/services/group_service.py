@@ -133,7 +133,7 @@ class GroupService:
         self.logger.info(f"Создана группа: {created_group.email}")
         return created_group
     
-    async def add_member(self, group_email: str, member_email: str, added_by: str = "system") -> bool:
+    async def add_member(self, group_email: str, member_email: str, added_by: str = "system", verify: bool = True) -> bool:
         """
         Добавить участника в группу
         
@@ -141,6 +141,7 @@ class GroupService:
             group_email: Email группы
             member_email: Email участника
             added_by: Кто добавил участника
+            verify: Проверить ли применение изменений
             
         Returns:
             True если добавлен успешно
@@ -150,8 +151,8 @@ class GroupService:
         if not group:
             raise GroupNotFoundError(f"Группа {group_email} не найдена")
         
-        # Добавление участника
-        result = await self.group_repo.add_member(group_email, member_email)
+        # Добавление участника с верификацией
+        result = await self.group_repo.add_member(group_email, member_email, verify=verify)
         
         if result:
             # Очистка кэша
@@ -162,14 +163,18 @@ class GroupService:
                 user=added_by,
                 action="add_group_member",
                 resource=f"group:{group_email}",
-                details={"member_email": member_email}
+                details={
+                    "member_email": member_email,
+                    "verified": verify
+                }
             )
             
-            self.logger.info(f"Добавлен участник {member_email} в группу {group_email}")
+            verification_status = "с верификацией" if verify else "без верификации"
+            self.logger.info(f"Добавлен участник {member_email} в группу {group_email} {verification_status}")
         
         return result
     
-    async def remove_member(self, group_email: str, member_email: str, removed_by: str = "system") -> bool:
+    async def remove_member(self, group_email: str, member_email: str, removed_by: str = "system", verify: bool = True) -> bool:
         """
         Удалить участника из группы
         
@@ -177,6 +182,7 @@ class GroupService:
             group_email: Email группы
             member_email: Email участника
             removed_by: Кто удалил участника
+            verify: Проверить ли применение изменений
             
         Returns:
             True если удален успешно
@@ -186,8 +192,8 @@ class GroupService:
         if not group:
             raise GroupNotFoundError(f"Группа {group_email} не найдена")
         
-        # Удаление участника
-        result = await self.group_repo.remove_member(group_email, member_email)
+        # Удаление участника с верификацией
+        result = await self.group_repo.remove_member(group_email, member_email, verify=verify)
         
         if result:
             # Очистка кэша
@@ -198,10 +204,14 @@ class GroupService:
                 user=removed_by,
                 action="remove_group_member",
                 resource=f"group:{group_email}",
-                details={"member_email": member_email}
+                details={
+                    "member_email": member_email,
+                    "verified": verify
+                }
             )
             
-            self.logger.info(f"Удален участник {member_email} из группы {group_email}")
+            verification_status = "с верификацией" if verify else "без верификации"
+            self.logger.info(f"Удален участник {member_email} из группы {group_email} {verification_status}")
         
         return result
     
@@ -237,3 +247,48 @@ class GroupService:
         """Очистить кэш групп"""
         await self.cache_repo.delete("groups:all")
         await self.cache_repo.delete("groups:statistics")
+    
+    def get_operation_statistics(self) -> Dict[str, Any]:
+        """
+        Получить статистику операций с группами
+        
+        Returns:
+            Словарь со статистикой времени выполнения операций
+        """
+        if hasattr(self.group_repo, 'get_operation_statistics'):
+            return self.group_repo.get_operation_statistics()
+        return {}
+    
+    def get_recent_operations(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Получить последние операции с группами
+        
+        Args:
+            limit: Максимальное количество операций
+            
+        Returns:
+            Список последних операций
+        """
+        if hasattr(self.group_repo, 'get_recent_operations'):
+            return self.group_repo.get_recent_operations(limit)
+        return []
+    
+    def clear_operation_history(self):
+        """Очистить историю операций"""
+        if hasattr(self.group_repo, 'clear_operation_history'):
+            self.group_repo.clear_operation_history()
+            self.logger.info("История операций с группами очищена")
+    
+    async def get_group_propagation_status(self, group_email: str) -> Dict[str, Any]:
+        """
+        Получить статус распространения изменений группы
+        
+        Args:
+            group_email: Email группы
+            
+        Returns:
+            Словарь с информацией о статусе группы
+        """
+        if hasattr(self.group_repo, 'get_group_propagation_status'):
+            return await self.group_repo.get_group_propagation_status(group_email)
+        return {'error': 'Функция недоступна в текущей реализации репозитория'}

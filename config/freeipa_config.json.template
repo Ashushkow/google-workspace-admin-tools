@@ -1,0 +1,10 @@
+{
+  "server_url": "https://ipa.yourdomain.com",
+  "domain": "yourdomain.com",
+  "username": "admin",
+  "password": "your_password_here",
+  "use_kerberos": false,
+  "verify_ssl": true,
+  "ca_cert_path": null,
+  "timeout": 30
+}

@@ -44,6 +44,7 @@ class GoogleAPIClient:
         self.credentials = None
         self.service = None
         self.drive_service = None  # Добавляем сервис для Drive API
+        self.gmail_service = None  # Добавляем сервис для Gmail API
         
     def initialize(self) -> bool:
         """
@@ -107,6 +108,11 @@ class GoogleAPIClient:
                 logger.info("🔧 Создаем подключение к Google Drive API...")
                 self.drive_service = build('drive', 'v3', credentials=self.credentials)
                 logger.info("✅ Google Drive API успешно инициализирован")
+                
+                # Создаем сервис Gmail API для отправки приветственных писем
+                logger.info("🔧 Создаем подключение к Gmail API...")
+                self.gmail_service = build('gmail', 'v1', credentials=self.credentials)
+                logger.info("✅ Gmail API успешно инициализирован")
                 
                 # Проверяем подключение и права доступа (опционально)
                 logger.info("🔍 Проверяем подключение к Google Admin SDK...")
@@ -354,6 +360,146 @@ class GoogleAPIClient:
             
         except Exception as e:
             logger.error(f"Ошибка получения групп: {e}")
+            return []
+    
+    def add_group_member(self, group_email: str, member_email: str) -> bool:
+        """
+        Добавляет участника в группу
+        
+        Args:
+            group_email: Email группы
+            member_email: Email участника
+            
+        Returns:
+            True если добавлен успешно
+        """
+        try:
+            if not self.service:
+                logger.warning("Google API сервис не инициализирован")
+                return False
+            
+            member_data = {
+                'email': member_email,
+                'role': 'MEMBER'  # Роль по умолчанию
+            }
+            
+            result = self.service.members().insert(
+                groupKey=group_email,
+                body=member_data
+            ).execute()
+            
+            logger.info(f"✅ Участник {member_email} успешно добавлен в группу {group_email}")
+            return True
+            
+        except HttpError as e:
+            if e.resp.status == 409:
+                logger.info(f"ℹ️ Участник {member_email} уже является членом группы {group_email}")
+                return True  # Считаем успехом, если пользователь уже в группе
+            else:
+                logger.error(f"❌ Ошибка добавления участника {member_email} в группу {group_email}: {e}")
+                logger.error(f"🔍 HTTP статус: {e.resp.status}")
+                logger.error(f"🔍 Ответ сервера: {e.content}")
+                return False
+        except Exception as e:
+            logger.error(f"❌ Неожиданная ошибка при добавлении участника {member_email} в группу {group_email}: {e}")
+            return False
+    
+    def remove_group_member(self, group_email: str, member_email: str) -> bool:
+        """
+        Удаляет участника из группы
+        
+        Args:
+            group_email: Email группы
+            member_email: Email участника
+            
+        Returns:
+            True если удален успешно
+        """
+        try:
+            if not self.service:
+                logger.warning("Google API сервис не инициализирован")
+                return False
+            
+            self.service.members().delete(
+                groupKey=group_email,
+                memberKey=member_email
+            ).execute()
+            
+            logger.info(f"✅ Участник {member_email} успешно удален из группы {group_email}")
+            return True
+            
+        except HttpError as e:
+            if e.resp.status == 404:
+                logger.info(f"ℹ️ Участник {member_email} не найден в группе {group_email} (возможно, уже удален)")
+                return True  # Считаем успехом, если пользователь уже не в группе
+            else:
+                logger.error(f"❌ Ошибка удаления участника {member_email} из группы {group_email}: {e}")
+                logger.error(f"🔍 HTTP статус: {e.resp.status}")
+                logger.error(f"🔍 Ответ сервера: {e.content}")
+                return False
+        except Exception as e:
+            logger.error(f"❌ Неожиданная ошибка при удалении участника {member_email} из группы {group_email}: {e}")
+            return False
+    
+    def get_group_members(self, group_email: str, max_results: int = None) -> List[Dict[str, Any]]:
+        """
+        Получает список участников группы
+        
+        Args:
+            group_email: Email группы
+            max_results: Максимальное количество результатов (None = все)
+            
+        Returns:
+            Список участников
+        """
+        try:
+            if not self.service:
+                logger.warning("Google API сервис не инициализирован")
+                return []
+            
+            all_members = []
+            page_token = None
+            
+            while True:
+                request_params = {
+                    'groupKey': group_email,
+                    'maxResults': 200  # Максимальный размер страницы
+                }
+                
+                if page_token:
+                    request_params['pageToken'] = page_token
+                
+                result = self.service.members().list(**request_params).execute()
+                members = result.get('members', [])
+                
+                if members:
+                    all_members.extend(members)
+                    logger.debug(f"Загружена страница участников группы {group_email}: {len(members)} записей")
+                
+                # Проверяем наличие следующей страницы
+                page_token = result.get('nextPageToken')
+                if not page_token:
+                    break
+                    
+                # Если задано ограничение и мы его достигли
+                if max_results and len(all_members) >= max_results:
+                    all_members = all_members[:max_results]
+                    break
+            
+            logger.info(f"Загружено участников группы {group_email}: {len(all_members)}")
+            return all_members
+            
+        except HttpError as e:
+            if e.resp.status == 404:
+                logger.warning(f"Группа {group_email} не найдена")
+                return []
+            else:
+                logger.error(f"❌ Ошибка получения участников группы {group_email}: {e}")
+                logger.error(f"🔍 HTTP статус: {e.resp.status}")
+                logger.error(f"🔍 Ответ сервера: {e.content}")
+                return []
+        except Exception as e:
+            logger.error(f"❌ Неожиданная ошибка при получении участников группы {group_email}: {e}")
             return []
     
     async def get_quota_status(self) -> Optional[QuotaStatus]:

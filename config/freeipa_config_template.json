@@ -1,0 +1,9 @@
+{
+    "server_url": "https://ipa001.infra.int.sputnik8.com/",
+    "domain": "infra.int.sputnik8.com",
+    "username": "your_username_here",
+    "password": "your_password_here",
+    "use_kerberos": false,
+    "verify_ssl": false,
+    "description": "FreeIPA Server Configuration"
+}

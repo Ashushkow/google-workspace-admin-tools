@@ -82,6 +82,7 @@ class MainToolbar(tk.Frame):
             font=('Arial', 9)
         ).pack(side='left', padx=(0, 8))
         
+        # Календари - только SPUTNIK календарь восстановлен
         ModernButton(
             bottom_buttons_frame,
             text=READY_LABELS['sputnik_section'],
@@ -90,13 +91,13 @@ class MainToolbar(tk.Frame):
             font=('Arial', 9, 'bold')
         ).pack(side='left', padx=(0, 8))
         
-        ModernButton(
-            bottom_buttons_frame,
-            text=READY_LABELS['calendars_section'],
-            command=self.callbacks.get('calendars', self._no_callback),
-            style='primary',
-            font=('Arial', 9)
-        ).pack(side='left', padx=(0, 8))
+        # ModernButton(
+        #     bottom_buttons_frame,
+        #     text=READY_LABELS['calendars_section'],
+        #     command=self.callbacks.get('calendars', self._no_callback),
+        #     style='primary',
+        #     font=('Arial', 9)
+        # ).pack(side='left', padx=(0, 8))
         
         ModernButton(
             bottom_buttons_frame,
@@ -104,6 +105,15 @@ class MainToolbar(tk.Frame):
             command=self.callbacks.get('documents', self._no_callback),
             style='info',
             font=('Arial', 9)
+        ).pack(side='left', padx=(0, 8))
+        
+        # FreeIPA интеграция
+        ModernButton(
+            bottom_buttons_frame,
+            text='🔗 FreeIPA',
+            command=self.callbacks.get('freeipa', self._no_callback),
+            style='warning',
+            font=('Arial', 9, 'bold')
         ).pack(side='left', padx=(0, 8))
         
     def _no_callback(self):
