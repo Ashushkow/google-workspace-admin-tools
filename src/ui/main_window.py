@@ -17,9 +17,11 @@ from .user_windows import CreateUserWindow, EditUserWindow
 from .employee_list_window import EmployeeListWindow
 from .additional_windows import AsanaInviteWindow, ErrorLogWindow
 from .group_management import GroupManagementWindow
+from .orgunit_management import OrgUnitManagementWindow
 from .calendar_management import open_calendar_management
 from .sputnik_calendar_ui import open_sputnik_calendar_window
 from .freeipa_management import open_freeipa_management
+from .myteam_user_window import open_myteam_user_window
 from ..api.users_api import get_user_list
 from ..api.service_adapter import ServiceAdapter
 from ..api.groups_api import list_groups
@@ -174,6 +176,18 @@ class AdminToolsMainWindow(tk.Tk):
             label="✏️ Редактировать пользователя",
             command=self.open_edit_user,
             accelerator="Ctrl+Enter"
+        )
+        users_menu.add_separator()
+        users_menu.add_command(
+            label="📁 Управление подразделениями",
+            command=self.open_orgunit_management,
+            accelerator="Ctrl+O"
+        )
+        users_menu.add_separator()
+        users_menu.add_command(
+            label="🏢 Новый пользователь в \"Моей Команде\"",
+            command=self.open_myteam_user,
+            accelerator="Ctrl+Shift+N"
         )
         
         # Меню "Группы"
@@ -373,9 +387,13 @@ class AdminToolsMainWindow(tk.Tk):
         self.hotkey_manager.register_callback('new_user', self.open_create_user)
         self.hotkey_manager.register_callback('user_list', self.open_employee_list)
         self.hotkey_manager.register_callback('edit_user', self.open_edit_user)
+        self.hotkey_manager.register_callback('orgunits', self.open_orgunit_management)
         
         # Группы
         self.hotkey_manager.register_callback('groups', self.open_group_management)
+        
+        # MyTeam
+        self.hotkey_manager.register_callback('myteam_user', self.open_myteam_user)
         
         # Календари
         self.hotkey_manager.register_callback('sputnik_calendar', self.open_sputnik_calendar)
@@ -395,6 +413,21 @@ class AdminToolsMainWindow(tk.Tk):
         self.hotkey_manager.register_callback('quit', self.quit_application)
 
     # Методы для открытия окон с декораторами обработки ошибок
+    @handle_ui_errors("открытие окна создания пользователя в \"Моей Команде\"")
+    def open_myteam_user(self):
+        """Открытие окна создания пользователя в \"Моей Команде\""""
+        # Можно добавить API токен из конфигурации, если он есть
+        api_token = ""  # TODO: загрузить из конфигурации
+        
+        def on_user_created():
+            """Callback после успешного создания пользователя"""
+            self.log_activity("✅ Пользователь успешно создан в \"Моей Команде\"")
+        
+        window = open_myteam_user_window(self, api_token, on_user_created)
+        if window:
+            self.log_activity("🏢 Открыто окно создания пользователя в \"Моей Команде\"")
+        return window
+
     @handle_service_errors("открытие списка сотрудников")
     def open_employee_list(self):
         """Открытие окна списка сотрудников"""
@@ -411,6 +444,12 @@ class AdminToolsMainWindow(tk.Tk):
         # Открываем окно со списком всех пользователей для выбора
         window = EditUserWindow(self, self.service)
         return "Открыто окно редактирования пользователя"
+
+    @handle_service_errors("открытие окна управления подразделениями")
+    def open_orgunit_management(self):
+        """Открытие окна управления организационными подразделениями"""
+        window = OrgUnitManagementWindow(self, self.service)
+        return "Открыто окно управления подразделениями"
 
     @handle_service_errors("открытие окна управления группами")
     def open_group_management(self):

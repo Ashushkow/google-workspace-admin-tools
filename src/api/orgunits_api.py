@@ -254,3 +254,221 @@ def get_orgunit_path_from_display_name(display_name: str, orgunits: List[Dict[st
             return ou.get('orgUnitPath', '/')
     
     return "/"  # По умолчанию возвращаем корень
+
+
+def get_user_orgunit(service: Any, user_email: str) -> str:
+    """
+    Получает путь OU для конкретного пользователя.
+    
+    Args:
+        service: Сервис Google Directory API
+        user_email: Email пользователя
+        
+    Returns:
+        Путь к OU пользователя
+    """
+    try:
+        logger.info(f"📋 Получение OU для пользователя: {user_email}")
+        
+        # Проверяем, является ли service объектом ServiceAdapter
+        if hasattr(service, '_users') and hasattr(service, '_groups'):
+            try:
+                from ..auth import get_service
+                google_service = get_service()
+                user = google_service.users().get(userKey=user_email).execute()
+            except ImportError:
+                logger.warning("⚠️ Не удалось получить прямой доступ к Google API")
+                return "/"
+        else:
+            # Прямой Google API service
+            user = service.users().get(userKey=user_email).execute()
+        
+        org_unit_path = user.get('orgUnitPath', '/')
+        logger.info(f"✅ OU пользователя {user_email}: {org_unit_path}")
+        
+        return org_unit_path
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка получения OU для пользователя {user_email}: {e}")
+        return "/"
+
+
+def get_display_name_for_orgunit_path(org_unit_path: str, orgunits: List[Dict[str, Any]]) -> str:
+    """
+    Получает отображаемое название OU по его пути.
+    
+    Args:
+        org_unit_path: Путь к OU
+        orgunits: Список всех OU
+        
+    Returns:
+        Отображаемое название OU
+    """
+    if org_unit_path == "/":
+        return "🏠 Корневое подразделение"
+    
+    # Ищем OU с указанным путем
+    for ou in orgunits:
+        if ou.get('orgUnitPath', '') == org_unit_path:
+            name = ou.get('name', 'Unknown')
+            # Добавляем отступы для визуального отображения иерархии
+            level = org_unit_path.count('/') - 1
+            indent = "  " * level
+            return f"{indent}🏢 {name}"
+    
+    return "🏠 Корневое подразделение"  # По умолчанию возвращаем корень
+
+
+def move_user_to_orgunit(service: Any, user_email: str, org_unit_path: str) -> Dict[str, Any]:
+    """
+    Перемещает пользователя в указанное организационное подразделение.
+    
+    Args:
+        service: Сервис Google Directory API
+        user_email: Email пользователя
+        org_unit_path: Путь к целевому OU
+        
+    Returns:
+        Результат операции с информацией об успехе/ошибке
+    """
+    try:
+        logger.info(f"📁 Перемещение пользователя {user_email} в OU: {org_unit_path}")
+        
+        # Проверяем, является ли service объектом ServiceAdapter
+        if hasattr(service, '_users') and hasattr(service, '_groups'):
+            try:
+                from ..auth import get_service
+                google_service = get_service()
+                result = google_service.users().update(
+                    userKey=user_email,
+                    body={'orgUnitPath': org_unit_path}
+                ).execute()
+            except ImportError:
+                logger.warning("⚠️ Не удалось получить прямой доступ к Google API")
+                return {
+                    'success': False,
+                    'message': 'Ошибка доступа к Google API'
+                }
+        else:
+            # Прямой Google API service
+            result = service.users().update(
+                userKey=user_email,
+                body={'orgUnitPath': org_unit_path}
+            ).execute()
+        
+        logger.info(f"✅ Пользователь {user_email} успешно перемещен в OU: {org_unit_path}")
+        
+        return {
+            'success': True,
+            'message': f'Пользователь успешно перемещен в {org_unit_path}',
+            'user': result
+        }
+        
+    except HttpError as e:
+        if e.resp.status == 403:
+            logger.error("❌ Недостаточно прав для перемещения пользователя")
+            error_msg = "Недостаточно прав для перемещения пользователя в OU"
+        elif e.resp.status == 404:
+            logger.error("❌ Пользователь или OU не найден")
+            error_msg = "Пользователь или организационное подразделение не найдено"
+        else:
+            logger.error(f"❌ HTTP ошибка при перемещении пользователя: {e}")
+            error_msg = f"HTTP ошибка: {e}"
+            
+        return {
+            'success': False,
+            'message': error_msg
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка перемещения пользователя {user_email} в OU {org_unit_path}: {e}")
+        return {
+            'success': False,
+            'message': f'Ошибка перемещения пользователя: {e}'
+        }
+
+
+def create_orgunit(service: Any, name: str, parent_ou_path: str = "/", description: str = "") -> Dict[str, Any]:
+    """
+    Создает новое организационное подразделение.
+    
+    Args:
+        service: Сервис Google Directory API
+        name: Название OU
+        parent_ou_path: Путь к родительскому OU (по умолчанию корневое)
+        description: Описание OU
+        
+    Returns:
+        Результат операции с информацией об успехе/ошибке
+    """
+    try:
+        logger.info(f"📁 Создание нового OU: {name} в {parent_ou_path}")
+        
+        # Формируем путь к новому OU
+        if parent_ou_path == "/":
+            new_ou_path = f"/{name}"
+        else:
+            new_ou_path = f"{parent_ou_path}/{name}"
+        
+        ou_body = {
+            'name': name,
+            'orgUnitPath': new_ou_path,
+            'parentOrgUnitPath': parent_ou_path
+        }
+        
+        if description:
+            ou_body['description'] = description
+        
+        # Проверяем, является ли service объектом ServiceAdapter
+        if hasattr(service, '_users') and hasattr(service, '_groups'):
+            try:
+                from ..auth import get_service
+                google_service = get_service()
+                result = google_service.orgunits().insert(
+                    customerId='my_customer',
+                    body=ou_body
+                ).execute()
+            except ImportError:
+                logger.warning("⚠️ Не удалось получить прямой доступ к Google API")
+                return {
+                    'success': False,
+                    'message': 'Ошибка доступа к Google API'
+                }
+        else:
+            # Прямой Google API service
+            result = service.orgunits().insert(
+                customerId='my_customer',
+                body=ou_body
+            ).execute()
+        
+        logger.info(f"✅ OU {name} успешно создано по пути: {new_ou_path}")
+        
+        return {
+            'success': True,
+            'message': f'Подразделение "{name}" успешно создано',
+            'orgunit': result,
+            'path': new_ou_path
+        }
+        
+    except HttpError as e:
+        if e.resp.status == 403:
+            logger.error("❌ Недостаточно прав для создания OU")
+            error_msg = "Недостаточно прав для создания организационного подразделения"
+        elif e.resp.status == 409:
+            logger.error("❌ OU с таким именем уже существует")
+            error_msg = "Подразделение с таким именем уже существует"
+        else:
+            logger.error(f"❌ HTTP ошибка при создании OU: {e}")
+            error_msg = f"HTTP ошибка: {e}"
+            
+        return {
+            'success': False,
+            'message': error_msg
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Ошибка создания OU {name}: {e}")
+        return {
+            'success': False,
+            'message': f'Ошибка создания подразделения: {e}'
+        }

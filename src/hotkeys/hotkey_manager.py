@@ -64,6 +64,11 @@ class HotkeyManager:
                 'description': 'Список пользователей',
                 'category': 'Пользователи'
             },
+            'myteam_user': {
+                'key': '<Control-Shift-n>',
+                'description': 'Новый пользователь в "Моей Команде"',
+                'category': 'Пользователи'
+            },
             
             # Управление группами
             'groups': {
@@ -72,7 +77,7 @@ class HotkeyManager:
                 'category': 'Группы'
             },
             'new_group': {
-                'key': '<Control-Shift-n>',
+                'key': '<Control-Shift-g>',
                 'description': 'Новая группа',
                 'category': 'Группы'
             },

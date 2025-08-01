@@ -10,8 +10,15 @@ import random
 from typing import Any, Optional
 
 from .ui_components import ModernColors, center_window
-from ..api.users_api import create_user, update_user, delete_user, get_user_list
-from ..api.orgunits_api import list_orgunits, format_orgunits_for_combobox, get_orgunit_path_from_display_name
+from ..api.users_api import create_user, update_user as api_update_user, delete_user, get_user_list
+from ..api.orgunits_api import (
+    list_orgunits, 
+    format_orgunits_for_combobox, 
+    get_orgunit_path_from_display_name,
+    get_user_orgunit,
+    get_display_name_for_orgunit_path,
+    move_user_to_orgunit
+)
 
 
 class CreateUserWindow(tk.Toplevel):
@@ -216,7 +223,7 @@ class EditUserWindow(tk.Toplevel):
     def __init__(self, master, service: Any):
         super().__init__(master)
         self.title('Изменить данные пользователя')
-        self.geometry('800x450')
+        self.geometry('800x550')  # Увеличиваем высоту для нового поля OU
         self.resizable(False, False)
         self.service = service
         self.configure(bg='SystemButtonFace')
@@ -224,8 +231,26 @@ class EditUserWindow(tk.Toplevel):
         if master:
             center_window(self, master)
 
+        # Загружаем список OU
+        self.orgunits = []
+        self.orgunit_display_names = []
+        self._load_orgunits()
+        
         self._load_users()
         self._create_widgets()
+
+    def _load_orgunits(self):
+        """Загружает список организационных подразделений"""
+        try:
+            self.orgunits = list_orgunits(self.service)
+            self.orgunit_display_names = format_orgunits_for_combobox(self.orgunits)
+            if not self.orgunit_display_names:
+                # Если не удалось загрузить OU, добавляем только корневое
+                self.orgunit_display_names = ["🏠 Корневое подразделение"]
+        except Exception as e:
+            print(f"Ошибка загрузки OU: {e}")
+            # В случае ошибки показываем только корневое подразделение
+            self.orgunit_display_names = ["🏠 Корневое подразделение"]
 
     def _load_users(self):
         """Загружает список пользователей"""
@@ -289,25 +314,34 @@ class EditUserWindow(tk.Toplevel):
         self.entry_pass = tk.Entry(right_frame, width=35, font=('Arial', 10), show='*')
         self.entry_pass.grid(row=3, column=1, pady=4)
 
+        # Подразделение (OU)
+        tk.Label(right_frame, text='Подразделение (OU):', bg='SystemButtonFace', 
+                font=('Arial', 10)).grid(row=4, column=0, sticky='e', pady=4)
+        self.combo_orgunit = ttk.Combobox(right_frame, width=32, font=('Arial', 10), state='readonly')
+        self.combo_orgunit['values'] = self.orgunit_display_names
+        if self.orgunit_display_names:
+            self.combo_orgunit.current(0)  # По умолчанию выбираем первый элемент
+        self.combo_orgunit.grid(row=4, column=1, pady=4)
+
         # Кнопки
         self.btn_update = tk.Button(right_frame, text='💾 Сохранить изменения', 
                                    command=self.update_user, font=('Arial', 10, 'bold'), width=22)
-        self.btn_update.grid(row=4, column=0, columnspan=2, pady=12)
+        self.btn_update.grid(row=5, column=0, columnspan=2, pady=12)
 
         self.btn_delete = tk.Button(right_frame, text='🗑️ Удалить пользователя', 
                                    command=self.delete_user, font=('Arial', 10, 'bold'), width=22)
-        self.btn_delete.grid(row=5, column=0, columnspan=2, pady=(0, 10))
+        self.btn_delete.grid(row=6, column=0, columnspan=2, pady=(0, 10))
 
         # Область результата
         self.txt_result = scrolledtext.ScrolledText(right_frame, width=45, height=3, 
                                                    wrap=tk.WORD, font=('Arial', 9))
-        self.txt_result.grid(row=6, column=0, columnspan=2, padx=5, pady=5)
+        self.txt_result.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
         self.txt_result.config(state=tk.DISABLED)
 
         # Кнопка закрытия
         self.btn_close = tk.Button(right_frame, text='❌ Закрыть', command=self.destroy, 
                                   font=('Arial', 10, 'bold'), width=22)
-        self.btn_close.grid(row=7, column=0, columnspan=2, pady=(2, 10))
+        self.btn_close.grid(row=8, column=0, columnspan=2, pady=(2, 10))
 
     def on_user_select(self, event):
         """Обработка выбора пользователя"""
@@ -332,6 +366,23 @@ class EditUserWindow(tk.Toplevel):
         
         self.entry_pass.delete(0, tk.END)
         
+        # Загружаем и устанавливаем текущее OU пользователя
+        try:
+            user_ou_path = get_user_orgunit(self.service, user['primaryEmail'])
+            user_ou_display = get_display_name_for_orgunit_path(user_ou_path, self.orgunits)
+            
+            # Находим индекс в списке отображаемых названий
+            try:
+                ou_index = self.orgunit_display_names.index(user_ou_display)
+                self.combo_orgunit.current(ou_index)
+            except ValueError:
+                # Если OU не найдено в списке, устанавливаем корневое
+                self.combo_orgunit.current(0)
+        except Exception as e:
+            print(f"Ошибка загрузки OU пользователя: {e}")
+            # В случае ошибки устанавливаем корневое OU
+            self.combo_orgunit.current(0)
+        
         # Очищаем результат
         self.txt_result.config(state=tk.NORMAL)
         self.txt_result.delete(1.0, tk.END)
@@ -344,7 +395,14 @@ class EditUserWindow(tk.Toplevel):
         last = self.entry_last.get().strip()
         password = self.entry_pass.get().strip()
         
-        # Формируем поля для обновления
+        # Получаем выбранное OU
+        selected_ou_display = self.combo_orgunit.get()
+        new_org_unit_path = get_orgunit_path_from_display_name(selected_ou_display, self.orgunits)
+        
+        # Получаем текущее OU пользователя для сравнения
+        current_org_unit_path = get_user_orgunit(self.service, email)
+        
+        # Формируем поля для обновления (исключаем OU)
         fields = {}
         if first or last:
             fields['name'] = {}
@@ -356,13 +414,29 @@ class EditUserWindow(tk.Toplevel):
             fields['password'] = password
         
         # Проверяем, что есть что обновлять
-        if not email or not fields:
+        if not email and not fields and new_org_unit_path == current_org_unit_path:
             self._show_result('Укажите email и хотя бы одно новое значение!')
             return
         
-        # Обновляем пользователя
-        result = update_user(self.service, email, fields)
-        self._show_result(result)
+        result_messages = []
+        
+        # Обновляем основные данные пользователя (если есть изменения)
+        if fields:
+            result = api_update_user(self.service, email, fields)
+            result_messages.append(result)
+        
+        # Перемещаем пользователя в другое OU (если нужно)
+        if new_org_unit_path != current_org_unit_path:
+            ou_result = move_user_to_orgunit(self.service, email, new_org_unit_path)
+            if ou_result['success']:
+                ou_display = get_display_name_for_orgunit_path(new_org_unit_path, self.orgunits)
+                result_messages.append(f"📁 Пользователь перемещен в: {ou_display}")
+            else:
+                result_messages.append(f"❌ Ошибка перемещения: {ou_result['message']}")
+        
+        # Объединяем все результаты
+        final_result = "\n".join(result_messages) if result_messages else "Нет изменений для применения"
+        self._show_result(final_result)
 
     def delete_user(self):
         """Удаление пользователя"""
