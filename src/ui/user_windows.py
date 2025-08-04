@@ -75,62 +75,76 @@ class CreateUserWindow(tk.Toplevel):
         self._add_validation(self.entry_last, 32)
 
         # Email (автогенерация)
-        tk.Label(self, text='Email (будет сгенерирован):', font=('Arial', 11)).grid(
-            row=2, column=0, sticky='e', padx=16, pady=8)
-        self.entry_email = tk.Entry(self, width=50, font=('Arial', 11), state='readonly')
-        self.entry_email.grid(row=2, column=1, padx=8)
+        email_frame = tk.Frame(self)
+        email_frame.grid(row=2, column=0, columnspan=2, sticky='w', padx=16, pady=8)
+        
+        tk.Label(email_frame, text='Email (будет сгенерирован):', font=('Arial', 11)).grid(
+            row=0, column=0, sticky='e')
+        self.entry_email = tk.Entry(email_frame, width=50, font=('Arial', 11), state='readonly')
+        self.entry_email.grid(row=0, column=1, padx=8)
+        
+        # Подсказка для primary email
+        tk.Label(email_frame, text='📧 Должен быть в домене @sputnik8.com', 
+                 font=('Arial', 9), fg='#666666').grid(row=1, column=1, sticky='w', padx=8)
 
         # Secondary Email
-        tk.Label(self, text='Secondary Email:', font=('Arial', 11)).grid(
-            row=3, column=0, sticky='e', padx=16, pady=8)
-        self.entry_secondary = tk.Entry(self, width=50, font=('Arial', 11))
-        self.entry_secondary.grid(row=3, column=1, padx=8)
+        secondary_frame = tk.Frame(self)
+        secondary_frame.grid(row=3, column=0, columnspan=2, sticky='w', padx=16, pady=8)
+        
+        tk.Label(secondary_frame, text='Secondary Email:', font=('Arial', 11)).grid(
+            row=0, column=0, sticky='e')
+        self.entry_secondary = tk.Entry(secondary_frame, width=50, font=('Arial', 11))
+        self.entry_secondary.grid(row=0, column=1, padx=8)
         self._add_validation(self.entry_secondary, 64)
+        
+        # Подсказка для secondary email
+        tk.Label(secondary_frame, text='💡 Может быть любой домен (Gmail, Yahoo и т.д.) для восстановления', 
+                 font=('Arial', 9), fg='#666666').grid(row=1, column=1, sticky='w', padx=8)
 
         # Phone Number
         tk.Label(self, text='Phone Number:', font=('Arial', 11)).grid(
-            row=4, column=0, sticky='e', padx=16, pady=8)
+            row=6, column=0, sticky='e', padx=16, pady=8)
         self.entry_phone = tk.Entry(self, width=50, font=('Arial', 11))
-        self.entry_phone.grid(row=4, column=1, padx=8)
+        self.entry_phone.grid(row=6, column=1, padx=8)
         self._add_validation(self.entry_phone, 20)
 
         # Organizational Unit
         tk.Label(self, text='Подразделение (OU):', font=('Arial', 11)).grid(
-            row=5, column=0, sticky='e', padx=16, pady=8)
+            row=7, column=0, sticky='e', padx=16, pady=8)
         self.combo_orgunit = ttk.Combobox(self, width=47, font=('Arial', 11), state='readonly')
         self.combo_orgunit['values'] = self.orgunit_display_names
         if self.orgunit_display_names:
             self.combo_orgunit.current(0)  # Выбираем первый элемент (корневое OU) по умолчанию
-        self.combo_orgunit.grid(row=5, column=1, padx=8, sticky='w')
+        self.combo_orgunit.grid(row=7, column=1, padx=8, sticky='w')
 
         # Password
         tk.Label(self, text='Password:', font=('Arial', 11)).grid(
-            row=6, column=0, sticky='e', padx=16, pady=8)
+            row=8, column=0, sticky='e', padx=16, pady=8)
         self.entry_pass = tk.Entry(self, width=36, font=('Arial', 11), show='*')
-        self.entry_pass.grid(row=6, column=1, padx=8, sticky='w')
+        self.entry_pass.grid(row=8, column=1, padx=8, sticky='w')
         self._add_validation(self.entry_pass, 32)
 
         # Generate Password Button
         self.btn_gen_pass = tk.Button(self, text='🔑 Сгенерировать', 
                                      command=self.generate_password, 
                                      font=('Arial', 9), width=16)
-        self.btn_gen_pass.grid(row=6, column=1, padx=8, sticky='e')
+        self.btn_gen_pass.grid(row=8, column=1, padx=8, sticky='e')
 
         # Create Button
         self.btn_create = tk.Button(self, text='➕ Создать', command=self.create_user, 
                                    font=('Arial', 11, 'bold'), width=18)
-        self.btn_create.grid(row=7, column=0, columnspan=2, pady=18)
+        self.btn_create.grid(row=9, column=0, columnspan=2, pady=18)
 
         # Result Text Area
         self.txt_result = scrolledtext.ScrolledText(self, width=80, height=5, 
                                                    wrap=tk.WORD, font=('Arial', 10))
-        self.txt_result.grid(row=8, column=0, columnspan=2, padx=16, pady=7)
+        self.txt_result.grid(row=10, column=0, columnspan=2, padx=16, pady=8)
         self.txt_result.config(state=tk.DISABLED)
 
         # Close Button
         self.btn_close = tk.Button(self, text='❌ Закрыть', command=self.destroy, 
                                   font=('Arial', 10), width=18)
-        self.btn_close.grid(row=9, column=0, columnspan=2, pady=(2, 12))
+        self.btn_close.grid(row=11, column=0, columnspan=2, pady=(2, 12))
 
     def _add_validation(self, entry: tk.Entry, maxlen: int):
         """Добавляет валидацию длины для поля ввода"""
@@ -199,6 +213,21 @@ class CreateUserWindow(tk.Toplevel):
             messagebox.showwarning('Warning', 
                 'Заполните обязательные поля (First Name, Last Name, Email, Password)!')
             return
+        
+        # Дополнительная проверка домена primary email
+        if '@' in email:
+            email_domain = email.split('@')[-1].lower()
+            if email_domain not in ['sputnik8.com']:
+                result = messagebox.askyesno(
+                    'Проверьте email домен',
+                    f'Primary Email должен быть в домене @sputnik8.com\n\n'
+                    f'Вы указали: {email}\n'
+                    f'Домен: {email_domain}\n\n'
+                    f'Возможно, вы хотели указать этот адрес как Secondary Email?\n\n'
+                    f'Продолжить создание пользователя?'
+                )
+                if not result:
+                    return
         
         # Создаем пользователя с указанием OU
         result = create_user(

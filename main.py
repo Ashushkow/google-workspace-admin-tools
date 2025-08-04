@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Admin Team Tools v2.1.0 - Google Workspace Management
+Admin Team Tools v2.2.0 - Google Workspace Management
 Приоритет: OAuth 2.0 авторизация для безопасного интерактивного управления
 """
 
@@ -25,7 +25,7 @@ from src.config.enhanced_config import config
 def show_startup_banner():
     """Показывает стартовый баннер с информацией об OAuth 2.0"""
     print("=" * 70)
-    print("🚀 ADMIN TEAM TOOLS v2.1.0")
+    print("🚀 ADMIN TEAM TOOLS v2.2.0")
     print("📊 Google Workspace Management System")
     print("=" * 70)
     print("🔐 Приоритет авторизации: OAuth 2.0 (интерактивная)")

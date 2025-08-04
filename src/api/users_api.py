@@ -22,7 +22,7 @@ from ..utils.data_cache import data_cache
 
 def user_exists(service: Any, email: str) -> Optional[bool]:
     """
-    Проверяет существование пользователя по email.
+    Проверяет существование пользователя по email с retry логикой.
     
     Args:
         service: Сервис Google Directory API
@@ -31,21 +31,89 @@ def user_exists(service: Any, email: str) -> Optional[bool]:
     Returns:
         True если пользователь найден, False если не найден, None при ошибке
     """
-    try:
-        service.users().get(userKey=email).execute()
-        return True
-    except HttpError as e:
-        if e.resp is not None and hasattr(e.resp, 'status') and e.resp.status == 404:
-            return False
-        if 'notFound' in str(e):
-            return False
-        print(f"[user_exists] HttpError: {e}")
-        return None
-    except Exception as e:
-        if 'notFound' in str(e):
-            return False
-        print(f"[user_exists] Exception: {e}")
-        return None
+    max_retries = 3
+    retry_count = 0
+    
+    while retry_count < max_retries:
+        try:
+            service.users().get(userKey=email).execute()
+            return True
+        except HttpError as e:
+            # Проверяем различные варианты ошибки "пользователь не найден"
+            if e.resp is not None and hasattr(e.resp, 'status') and e.resp.status == 404:
+                return False
+            if 'notFound' in str(e):
+                return False
+            if 'User not found' in str(e):
+                return False
+            if 'does not exist' in str(e):
+                return False
+            
+            # Обрабатываем ошибку 403 для внешних доменов
+            if e.resp is not None and hasattr(e.resp, 'status') and e.resp.status == 403:
+                # Проверяем, относится ли email к нашему домену
+                email_domain = email.split('@')[-1] if '@' in email else ''
+                
+                # Получаем домен из конфигурации
+                try:
+                    from ..config.enhanced_config import config
+                    workspace_domain = config.settings.google_workspace_domain
+                except ImportError:
+                    workspace_domain = "sputnik8.com"  # Fallback
+                
+                if email_domain != workspace_domain:
+                    # Это внешний домен, Google Workspace не может управлять такими пользователями
+                    print(f"[user_exists] Email {email} относится к внешнему домену {email_domain}")
+                    return False
+                else:
+                    # Это наш домен, но нет прав доступа - возможно временная проблема
+                    print(f"[user_exists] Нет прав доступа к пользователю {email} в нашем домене (попытка {retry_count + 1})")
+                    
+                    if retry_count < max_retries - 1:
+                        import time
+                        time.sleep(1)  # Ждем секунду перед повтором
+                        retry_count += 1
+                        continue
+                    else:
+                        return None
+                        
+            # Для других HTTP ошибок - возможно временная проблема
+            if retry_count < max_retries - 1:
+                print(f"[user_exists] HTTP ошибка для {email} (попытка {retry_count + 1}): {e}")
+                import time
+                time.sleep(1)
+                retry_count += 1
+                continue
+            else:
+                # Логируем неожиданные HTTP ошибки после всех попыток
+                print(f"[user_exists] Неожиданная HttpError для {email} после {max_retries} попыток: {e}")
+                print(f"[user_exists] Статус ответа: {getattr(e.resp, 'status', 'N/A') if e.resp else 'N/A'}")
+                return None
+                
+        except Exception as e:
+            # Проверяем различные варианты ошибки "пользователь не найден"
+            if 'notFound' in str(e):
+                return False
+            if 'User not found' in str(e):
+                return False
+            if 'does not exist' in str(e):
+                return False
+                
+            # Для других ошибок - возможно временная проблема
+            if retry_count < max_retries - 1:
+                print(f"[user_exists] Exception для {email} (попытка {retry_count + 1}): {e}")
+                import time
+                time.sleep(1)
+                retry_count += 1
+                continue
+            else:
+                # Логируем неожиданные ошибки после всех попыток
+                print(f"[user_exists] Неожиданная Exception для {email} после {max_retries} попыток: {e}")
+                print(f"[user_exists] Тип ошибки: {type(e)}")
+                return None
+    
+    # Это не должно произойти, но на всякий случай
+    return None
 
 
 def create_user(service: Any, email: str, first_name: str, last_name: str, 
@@ -67,10 +135,56 @@ def create_user(service: Any, email: str, first_name: str, last_name: str,
     Returns:
         Строка с результатом операции
     """
+    # Валидация email
+    if not email or '@' not in email:
+        return 'Ошибка: Неверный формат email адреса.'
+    
+    email_domain = email.split('@')[-1]
+    
+    # Получаем домен workspace из конфигурации
+    try:
+        from ..config.enhanced_config import config
+        workspace_domain = config.settings.google_workspace_domain
+    except ImportError:
+        workspace_domain = "sputnik8.com"  # Fallback
+    
+    if email_domain != workspace_domain:
+        return f'Ошибка: Можно создавать пользователей только в домене {workspace_domain}. Указанный email относится к домену {email_domain}.'
+    
     # Проверяем существование пользователя
+    print(f"[create_user] Проверка существования пользователя: {email}")
     exists = user_exists(service, email)
+    print(f"[create_user] Результат проверки: {exists}")
+    
     if exists is None:
-        return 'Ошибка: Не удалось проверить существование пользователя.'
+        # Пытаемся получить новый сервис и повторить проверку
+        print(f"[create_user] Получен None от user_exists, пытаемся восстановить...")
+        
+        try:
+            from ..auth import get_service
+            new_service = get_service()
+            
+            if new_service:
+                print(f"[create_user] Получен новый сервис, повторная проверка...")
+                exists = user_exists(new_service, email)
+                print(f"[create_user] Результат с новым сервисом: {exists}")
+                
+                if exists is not None:
+                    print(f"[create_user] Восстановление успешно, используем новый сервис")
+                    service = new_service  # Используем новый сервис для создания
+                else:
+                    error_msg = f'Ошибка: Не удалось проверить существование пользователя {email}. Проверьте права доступа и подключение к Google API.'
+                    print(f"[create_user] {error_msg}")
+                    return error_msg
+            else:
+                error_msg = f'Ошибка: Не удалось получить новый сервис для проверки пользователя {email}.'
+                print(f"[create_user] {error_msg}")
+                return error_msg
+                
+        except Exception as recovery_error:
+            error_msg = f'Ошибка: Не удалось восстановить подключение к API для проверки пользователя {email}. Детали: {recovery_error}'
+            print(f"[create_user] {error_msg}")
+            return error_msg
     if exists:
         return f'Пользователь с email {email} уже существует.'
     
