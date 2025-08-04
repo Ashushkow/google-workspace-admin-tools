@@ -5,8 +5,8 @@ Makefile для автоматизации задач разработки.
 """
 
 # === Переменные ===
-PYTHON := python
-PIP := pip
+PYTHON := .venv\Scripts\python.exe
+PIP := .venv\Scripts\pip.exe
 PYTEST := pytest
 BLACK := black
 FLAKE8 := flake8
@@ -106,7 +106,7 @@ build:  ## Собрать пакет
 
 .PHONY: build-exe
 build-exe:  ## Собрать исполняемый файл
-	pyinstaller --onefile --windowed --name AdminTeamTools main_new.py
+	.venv\Scripts\pyinstaller.exe --onefile --windowed --name AdminTeamTools_v2.2.0 main.py
 
 .PHONY: build-docker
 build-docker:  ## Собрать Docker образ
