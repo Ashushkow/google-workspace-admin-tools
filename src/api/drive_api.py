@@ -213,6 +213,45 @@ class DriveAPI:
             
         except HttpError as e:
             error_details = e.error_details if hasattr(e, 'error_details') else str(e)
+            
+            # Проверяем, если ошибка связана с отсутствием Google аккаунта или требованием уведомления
+            if ('invalidSharingRequest' in str(error_details) and 
+                ('Notify people' in str(error_details) or 'notify' in str(error_details).lower())):
+                
+                logger.warning(f"⚠️ Email {email} требует отправки уведомления. Попытка добавить с уведомлением...")
+                
+                # Пробуем ещё раз с обязательным уведомлением
+                try:
+                    request_params['sendNotificationEmail'] = True
+                    if not message:
+                        request_params['emailMessage'] = f"Вам предоставлен доступ к документу с ролью '{role}'"
+                    else:
+                        request_params['emailMessage'] = message
+                    
+                    result = self.service.permissions().create(**request_params).execute()
+                    logger.info(f"✅ Разрешение добавлено с уведомлением: {email} -> {role} для файла {file_id}")
+                    return True
+                    
+                except HttpError as e2:
+                    logger.error(f"❌ Повторная попытка не удалась: {e2}")
+                    return False
+            
+            # Специальная обработка для корпоративных доменов
+            elif email.endswith('@sputnik8.com') and 'invalidSharingRequest' in str(error_details):
+                logger.warning(f"⚠️ Корпоративный email {email}. Попытка с принудительным уведомлением...")
+                
+                try:
+                    request_params['sendNotificationEmail'] = True
+                    request_params['emailMessage'] = f"Вам предоставлен доступ к документу с ролью '{role}'"
+                    
+                    result = self.service.permissions().create(**request_params).execute()
+                    logger.info(f"✅ Разрешение добавлено для корпоративного email: {email} -> {role}")
+                    return True
+                    
+                except HttpError as e3:
+                    logger.error(f"❌ Не удалось добавить доступ для корпоративного email: {e3}")
+                    return False
+            
             logger.error(f"❌ HTTP ошибка при добавлении разрешения: {error_details}")
             return False
         except Exception as e:

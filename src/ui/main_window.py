@@ -515,6 +515,15 @@ class AdminToolsMainWindow(tk.Tk):
             from typing import List, Optional
             
             @dataclass
+            class DocumentAccessRequest:
+                """Запрос на предоставление доступа к документу"""
+                document_url: str
+                user_email: str
+                role: str  # 'reader', 'commenter', 'writer'
+                notify: bool = True
+                message: Optional[str] = None
+            
+            @dataclass
             class DocumentInfo:
                 """Информация о документе с доступами"""
                 file_id: str
@@ -592,22 +601,119 @@ class AdminToolsMainWindow(tk.Tk):
                     return type_descriptions.get(perm_type, perm_type)
                 
                 def grant_access(self, request):
-                    """Предоставляет доступ к документу (заглушка)"""
-                    self.logger.info(f"📋 Попытка предоставить доступ: {request}")
-                    # Для упрощения возвращаем False - функция не реализована
-                    return False
+                    """Предоставляет доступ к документу"""
+                    try:
+                        # Извлекаем ID файла из URL
+                        file_id = self.drive_api.extract_file_id_from_url(request.document_url)
+                        if not file_id:
+                            self.logger.error(f"Не удалось извлечь ID файла из URL: {request.document_url}")
+                            return False
+                        
+                        # Проверяем, что роль валидна
+                        valid_roles = ['reader', 'commenter', 'writer']
+                        if request.role not in valid_roles:
+                            self.logger.error(f"Неверная роль: {request.role}. Допустимые: {valid_roles}")
+                            return False
+                        
+                        # Предоставляем доступ
+                        success = self.drive_api.add_permission(
+                            file_id=file_id,
+                            email=request.user_email,
+                            role=request.role,
+                            notify=request.notify,
+                            message=request.message
+                        )
+                        
+                        if success:
+                            self.logger.info(f"✅ Доступ предоставлен: {request.user_email} ({request.role}) к документу {file_id}")
+                        else:
+                            self.logger.error(f"❌ Не удалось предоставить доступ: {request.user_email} к документу {file_id}")
+                        
+                        return success
+                        
+                    except Exception as e:
+                        self.logger.error(f"Ошибка при предоставлении доступа: {e}")
+                        return False
                 
                 def revoke_access(self, document_url, email):
-                    """Отзывает доступ к документу (заглушка)"""
-                    self.logger.info(f"📋 Попытка отозвать доступ для {email}")
-                    # Для упрощения возвращаем False - функция не реализована
-                    return False
+                    """Отзывает доступ к документу"""
+                    try:
+                        # Извлекаем ID файла из URL
+                        file_id = self.drive_api.extract_file_id_from_url(document_url)
+                        if not file_id:
+                            self.logger.error(f"Не удалось извлечь ID файла из URL: {document_url}")
+                            return False
+                        
+                        # Получаем список разрешений
+                        permissions = self.drive_api.get_permissions(file_id)
+                        
+                        # Ищем разрешение для указанного пользователя
+                        permission_to_remove = None
+                        for perm in permissions:
+                            if perm.email_address == email:
+                                permission_to_remove = perm
+                                break
+                        
+                        if not permission_to_remove:
+                            self.logger.warning(f"Разрешение для {email} не найдено в документе {file_id}")
+                            return False
+                        
+                        # Удаляем разрешение
+                        success = self.drive_api.remove_permission(file_id, permission_to_remove.permission_id)
+                        
+                        if success:
+                            self.logger.info(f"✅ Доступ отозван: {email} к документу {file_id}")
+                        else:
+                            self.logger.error(f"❌ Не удалось отозвать доступ: {email} к документу {file_id}")
+                        
+                        return success
+                        
+                    except Exception as e:
+                        self.logger.error(f"Ошибка при отзыве доступа: {e}")
+                        return False
                 
                 def change_access_role(self, document_url, email, new_role):
-                    """Изменяет роль доступа (заглушка)"""
-                    self.logger.info(f"📋 Попытка изменить роль для {email} на {new_role}")
-                    # Для упрощения возвращаем False - функция не реализована
-                    return False
+                    """Изменяет роль пользователя в доступе к документу"""
+                    try:
+                        # Извлекаем ID файла из URL
+                        file_id = self.drive_api.extract_file_id_from_url(document_url)
+                        if not file_id:
+                            self.logger.error(f"Не удалось извлечь ID файла из URL: {document_url}")
+                            return False
+                        
+                        # Проверяем, что роль валидна
+                        valid_roles = ['reader', 'commenter', 'writer']
+                        if new_role not in valid_roles:
+                            self.logger.error(f"Неверная роль: {new_role}. Допустимые: {valid_roles}")
+                            return False
+                        
+                        # Получаем список разрешений
+                        permissions = self.drive_api.get_permissions(file_id)
+                        
+                        # Ищем разрешение для указанного пользователя
+                        permission_to_update = None
+                        for perm in permissions:
+                            if perm.email_address == email:
+                                permission_to_update = perm
+                                break
+                        
+                        if not permission_to_update:
+                            self.logger.warning(f"Разрешение для {email} не найдено в документе {file_id}")
+                            return False
+                        
+                        # Обновляем разрешение
+                        success = self.drive_api.update_permission(file_id, permission_to_update.permission_id, new_role)
+                        
+                        if success:
+                            self.logger.info(f"✅ Роль изменена: {email} -> {new_role} для документа {file_id}")
+                        else:
+                            self.logger.error(f"❌ Не удалось изменить роль: {email} -> {new_role} для документа {file_id}")
+                        
+                        return success
+                        
+                    except Exception as e:
+                        self.logger.error(f"Ошибка при изменении роли доступа: {e}")
+                        return False
             
             document_service = DocumentService(credentials)
             self.logger.info("✅ DocumentService создан успешно")
