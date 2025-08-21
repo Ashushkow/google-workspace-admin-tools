@@ -45,6 +45,11 @@ class AdminToolsMainWindow(tk.Tk):
         self._ui_initialized = False
         self.logger = logging.getLogger(__name__)
         
+        # Если сервис не передан, используем заглушку
+        if self.service is None:
+            print("⚠️ Главное окно запущено без сервиса - используем базовый режим")
+            self._setup_fallback_mode()
+        
         # Компоненты UI
         self.statistics_panel = None
         self.activity_log = None
@@ -62,7 +67,8 @@ class AdminToolsMainWindow(tk.Tk):
         
         # Настройка главного окна
         self.title('Admin Team Tools v2.0.5 - Управление пользователями Google Workspace')
-        self.geometry('600x400')
+        self.geometry('900x650')  # Оптимальный размер для компактного отображения
+        self.minsize(800, 550)    # Минимальный размер для корректного отображения
         self.resizable(True, True)
         
         # Центрируем окно
@@ -112,7 +118,7 @@ class AdminToolsMainWindow(tk.Tk):
 
     def create_header(self):
         """Создание заголовка приложения"""
-        self.header_frame = tk.Frame(self, height=60)
+        self.header_frame = tk.Frame(self, height=50)  # Уменьшили высоту с 60 до 50
         self.header_frame.pack(fill='x', padx=0, pady=0)
         self.header_frame.pack_propagate(False)
         
@@ -120,14 +126,14 @@ class AdminToolsMainWindow(tk.Tk):
         self.title_label = tk.Label(
             self.header_frame, 
             text='Admin Team Tools',
-            font=('Arial', 16, 'bold'),
+            font=('Arial', 14, 'bold'),  # Уменьшили шрифт с 16 до 14
             fg='white'
         )
-        self.title_label.pack(side='left', padx=15, pady=15)
+        self.title_label.pack(side='left', padx=12, pady=12)  # Уменьшили отступы с 15 до 12
         
         # Переключатель тем
         self.theme_switcher = ThemeSwitcher(self.header_frame)
-        self.theme_switcher.pack(side='right', padx=(10, 5), pady=15)
+        self.theme_switcher.pack(side='right', padx=(8, 4), pady=12)  # Уменьшили отступы
         
         # Кнопка обновления данных
         self.refresh_btn = ModernButton(
@@ -135,9 +141,9 @@ class AdminToolsMainWindow(tk.Tk):
             text='🔄 Обновить',
             command=self.refresh_data,
             style='secondary',
-            font=('Arial', 9)
+            font=('Arial', 8)  # Уменьшили шрифт с 9 до 8
         )
-        self.refresh_btn.pack(side='right', padx=(5, 10), pady=15)
+        self.refresh_btn.pack(side='right', padx=(4, 8), pady=12)  # Уменьшили отступы
 
     def create_menu(self):
         """Создание меню"""
@@ -286,7 +292,7 @@ class AdminToolsMainWindow(tk.Tk):
     def create_main_area(self):
         """Создание основной рабочей области"""
         main_frame = tk.Frame(self, bg=ModernColors.BACKGROUND)
-        main_frame.pack(fill='both', expand=True, padx=15, pady=5)
+        main_frame.pack(fill='both', expand=True, padx=12, pady=4)  # Уменьшили отступы с 15,5 до 12,4
         
         # Левая панель - статистика и быстрые действия
         quick_actions_callbacks = {
@@ -432,34 +438,67 @@ class AdminToolsMainWindow(tk.Tk):
     def open_employee_list(self):
         """Открытие окна списка сотрудников"""
         window = EmployeeListWindow(self, self.service)
+        if window:
+            self.log_activity("👥 Открыто окно списка сотрудников")
 
     @handle_service_errors("открытие окна создания пользователя")
     def open_create_user(self):
         """Открытие окна создания пользователя"""
-        window = CreateUserWindow(self, self.service)
+        def on_user_created():
+            """Callback после успешного создания пользователя"""
+            self.log_activity("✅ Пользователь успешно создан через Google Workspace API")
+            # Обновляем статистику
+            if hasattr(self, 'refresh_statistics'):
+                self.refresh_statistics()
+        
+        window = CreateUserWindow(self, self.service, on_user_created)
+        if window:
+            self.log_activity("🏢 Открыто окно создания пользователя Google Workspace")
 
     @handle_service_errors("открытие окна редактирования пользователя")
     def open_edit_user(self):
         """Открытие окна редактирования пользователя"""
+        def on_user_updated():
+            """Callback после успешного обновления пользователя"""
+            self.log_activity("✅ Данные пользователя успешно обновлены")
+            # Обновляем статистику
+            if hasattr(self, 'refresh_statistics'):
+                self.refresh_statistics()
+        
         # Открываем окно со списком всех пользователей для выбора
-        window = EditUserWindow(self, self.service)
+        window = EditUserWindow(self, self.service, on_user_updated)
+        if window:
+            self.log_activity("✏️ Открыто окно редактирования пользователя Google Workspace")
         return "Открыто окно редактирования пользователя"
 
     @handle_service_errors("открытие окна управления подразделениями")
     def open_orgunit_management(self):
         """Открытие окна управления организационными подразделениями"""
         window = OrgUnitManagementWindow(self, self.service)
+        if window:
+            self.log_activity("🏢 Открыто окно управления организационными подразделениями")
         return "Открыто окно управления подразделениями"
 
     @handle_service_errors("открытие окна управления группами")
     def open_group_management(self):
         """Открытие окна управления группами"""
-        window = GroupManagementWindow(self, self.service)
+        def on_group_updated():
+            """Callback после операций с группами"""
+            self.log_activity("✅ Группа успешно обновлена")
+            # Обновляем статистику
+            if hasattr(self, 'refresh_statistics'):
+                self.refresh_statistics()
+        
+        window = GroupManagementWindow(self, self.service, on_group_updated)
+        if window:
+            self.log_activity("👥 Открыто окно управления группами")
 
     @handle_ui_errors("открытие окна управления календарями")
     def open_calendar_management(self):
         """Открытие окна управления календарями"""
         window = open_calendar_management(self, self.service)
+        if window:
+            self.log_activity("📅 Открыто окно управления календарями")
 
     @handle_ui_errors("открытие окна календаря SPUTНIK")
     def open_sputnik_calendar(self):
@@ -481,26 +520,48 @@ class AdminToolsMainWindow(tk.Tk):
                 messagebox.showerror("Ошибка", "Google API сервис не инициализирован")
                 return
             
-            self.logger.info("✅ Сервис инициализирован, получаем Google API клиент")
+            self.logger.info("✅ Сервис инициализирован, используем существующие credentials")
             
-            # Упрощенный подход - используем прямое создание клиента с уже проверенными credentials
-            self.logger.info("🔄 Создаем новый Google API клиент")
-            from src.api.google_api_client import GoogleAPIClient
-            from src.config.enhanced_config import config
+            # Используем credentials из существующего сервиса вместо создания нового клиента
+            credentials = None
             
-            google_client = GoogleAPIClient(config.settings.google_application_credentials)
-            if not google_client.initialize():
-                self.logger.error("❌ Не удалось инициализировать Google API клиент")
-                messagebox.showerror("Ошибка", "Не удалось инициализировать Google API клиент")
-                return
+            # Попробуем получить credentials из ServiceAdapter
+            if hasattr(self.service, 'get_credentials'):
+                try:
+                    credentials = self.service.get_credentials()
+                    self.logger.info("✅ Получили credentials из ServiceAdapter")
+                except Exception as e:
+                    self.logger.warning(f"⚠️ Ошибка получения credentials из ServiceAdapter: {e}")
             
-            self.logger.info("✅ Google API клиент инициализирован")
-            
-            # Получаем credentials
-            self.logger.info("🔄 Получаем credentials")
-            credentials = google_client.get_credentials()
+            # Если нет ServiceAdapter или он не сработал, пробуем напрямую через auth
             if not credentials:
-                self.logger.error("❌ Не удалось получить учетные данные")
+                self.logger.info("🔄 Получаем credentials напрямую через auth модуль")
+                try:
+                    from src.auth import get_service
+                    service = get_service()
+                    
+                    # У сервиса Google API есть свойство _http с credentials
+                    if hasattr(service, '_http') and hasattr(service._http, 'credentials'):
+                        credentials = service._http.credentials
+                        self.logger.info("✅ Получили credentials из Google API сервиса")
+                    else:
+                        # Альтернативный способ через прямое получение credentials
+                        from src.auth import detect_credentials_type, get_service_account_credentials, get_oauth2_credentials
+                        
+                        creds_type = detect_credentials_type()
+                        if creds_type == 'service_account':
+                            credentials = get_service_account_credentials()
+                        elif creds_type == 'oauth2':
+                            credentials = get_oauth2_credentials()
+                        
+                        if credentials:
+                            self.logger.info(f"✅ Получили {creds_type} credentials напрямую")
+                            
+                except Exception as e:
+                    self.logger.error(f"❌ Ошибка получения credentials через auth: {e}")
+            
+            if not credentials:
+                self.logger.error("❌ Не удалось получить учетные данные всеми способами")
                 messagebox.showerror("Ошибка", "Не удалось получить учетные данные Google API")
                 return
             
@@ -737,6 +798,8 @@ class AdminToolsMainWindow(tk.Tk):
     def open_asana_invite(self):
         """Открытие окна приглашения в Asana"""
         window = AsanaInviteWindow(self)
+        if window:
+            self.log_activity("📝 Открыто окно приглашения в Asana")
 
     @handle_ui_errors("открытие окна управления FreeIPA")
     def open_freeipa_management(self):
@@ -753,6 +816,8 @@ class AdminToolsMainWindow(tk.Tk):
     def open_error_log(self):
         """Открытие окна журнала ошибок"""
         window = ErrorLogWindow(self)
+        if window:
+            self.log_activity("📄 Открыто окно журнала ошибок")
 
     @handle_service_errors("экспорт списка пользователей", True)
     @measure_performance
@@ -790,6 +855,7 @@ class AdminToolsMainWindow(tk.Tk):
                     ])
             
             messagebox.showinfo('Успех', f'Список пользователей сохранен в {filename}')
+            self.log_activity(f"📊 Экспорт пользователей завершен: {len(users)} записей сохранено")
             return f"Экспорт пользователей завершен: {filename}"
 
     def load_statistics_async(self):
@@ -828,16 +894,41 @@ class AdminToolsMainWindow(tk.Tk):
         
         async_manager.run_async(load_data, on_success, on_error)
 
+    def _setup_fallback_mode(self):
+        """Настройка базового режима без сервиса"""
+        class FallbackService:
+            def __init__(self):
+                self.users = []
+                self.groups = []
+                
+            def get_users_count(self):
+                return 0
+                
+            def get_groups_count(self):
+                return 0
+        
+        self.service = FallbackService()
+        print("✅ Установлен fallback сервис")
+
     @log_operation("Приложение готово к работе", "SUCCESS")
     def _delayed_init(self):
         """Отложенная инициализация после создания UI"""
         self._ui_initialized = True
         
-        # Теперь, когда UI создан, можем проверить статус сервиса
-        self.check_service_status()
+        # Добавляем запись о запуске приложения
+        self.log_activity("🚀 Google Workspace Admin Tools запущен")
         
-        # Загружаем статистику
-        self.load_statistics()
+        # Теперь, когда UI создан, можем проверить статус сервиса
+        try:
+            self.check_service_status()
+        except Exception as e:
+            self.log_activity(f"Ошибка проверки статуса сервиса: {e}", 'WARNING')
+        
+        # Загружаем статистику (с обработкой ошибок)
+        try:
+            self.load_statistics()
+        except Exception as e:
+            self.log_activity(f"Ошибка загрузки статистики: {e}", 'WARNING')
 
     def apply_theme(self):
         """Применение текущей темы ко всем элементам"""

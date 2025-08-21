@@ -9,7 +9,7 @@ import string
 import random
 from typing import Any, Optional
 
-from .ui_components import ModernColors, center_window
+from .ui_components import ModernColors, ModernButton, center_window
 from ..api.users_api import create_user, update_user as api_update_user, delete_user, get_user_list
 from ..api.orgunits_api import (
     list_orgunits, 
@@ -28,14 +28,20 @@ class CreateUserWindow(tk.Toplevel):
     
     def __init__(self, master, service: Any, on_created: Optional[callable] = None):
         super().__init__(master)
-        self.title('Создать пользователя')
-        self.geometry('700x600')  # Увеличиваем высоту для нового поля
-        self.resizable(False, False)
+        self.title('Создание пользователя')
+        self.geometry('800x800')  # Увеличиваем размер окна для лучшей видимости
+        self.resizable(True, True)  # Делаем окно масштабируемым
         self.service = service
         self.on_created = on_created
         self.transient(master)
         if master:
             center_window(self, master)
+        
+        # Применяем современные стили
+        self.configure(bg=ModernColors.BACKGROUND)
+        
+        # Устанавливаем минимальный размер окна
+        self.minsize(700, 600)
 
         # Загружаем список OU
         self.orgunits = []
@@ -60,91 +66,288 @@ class CreateUserWindow(tk.Toplevel):
 
     def _create_widgets(self):
         """Создает виджеты окна"""
+        # Создаем основной контейнер с современным стилем
+        main_frame = tk.Frame(self, bg=ModernColors.BACKGROUND)
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Заголовок окна
+        title_frame = tk.Frame(main_frame, bg=ModernColors.PRIMARY, height=50)
+        title_frame.pack(fill='x', pady=(0, 20))
+        title_frame.pack_propagate(False)
+        
+        title_label = tk.Label(
+            title_frame, 
+            text='🆕 Создание нового пользователя',
+            font=('Segoe UI', 14, 'bold'),
+            fg='white',
+            bg=ModernColors.PRIMARY
+        )
+        title_label.pack(expand=True)
+        
+        # Контейнер для формы
+        form_frame = tk.Frame(main_frame, bg=ModernColors.SURFACE, relief='solid', bd=1)
+        form_frame.pack(fill='both', expand=True, pady=(0, 10))
+        
+        # Внутренний контейнер формы с отступами
+        inner_frame = tk.Frame(form_frame, bg=ModernColors.SURFACE)
+        inner_frame.pack(fill='both', expand=True, padx=20, pady=20)
+        
+        # Настраиваем grid для масштабирования
+        inner_frame.columnconfigure(1, weight=1)  # Поля ввода будут растягиваться
+
         # First Name
-        tk.Label(self, text='First Name:', font=('Arial', 11)).grid(
-            row=0, column=0, sticky='e', padx=16, pady=12)
-        self.entry_first = tk.Entry(self, width=50, font=('Arial', 11))
-        self.entry_first.grid(row=0, column=1, padx=8)
+        self._create_field_with_label(inner_frame, 'First Name:', 0)
+        self.entry_first = self._create_modern_entry(inner_frame, 0, 50)
         self._add_validation(self.entry_first, 32)
 
         # Last Name
-        tk.Label(self, text='Last Name:', font=('Arial', 11)).grid(
-            row=1, column=0, sticky='e', padx=16, pady=8)
-        self.entry_last = tk.Entry(self, width=50, font=('Arial', 11))
-        self.entry_last.grid(row=1, column=1, padx=8)
+        self._create_field_with_label(inner_frame, 'Last Name:', 1)
+        self.entry_last = self._create_modern_entry(inner_frame, 1, 50)
         self._add_validation(self.entry_last, 32)
 
         # Email (автогенерация)
-        email_frame = tk.Frame(self)
-        email_frame.grid(row=2, column=0, columnspan=2, sticky='w', padx=16, pady=8)
+        email_frame = tk.Frame(inner_frame, bg=ModernColors.SURFACE)
+        email_frame.grid(row=2, column=0, columnspan=2, sticky='ew', pady=(12, 8))
+        email_frame.columnconfigure(1, weight=1)
         
-        tk.Label(email_frame, text='Email (будет сгенерирован):', font=('Arial', 11)).grid(
-            row=0, column=0, sticky='e')
-        self.entry_email = tk.Entry(email_frame, width=50, font=('Arial', 11), state='readonly')
-        self.entry_email.grid(row=0, column=1, padx=8)
+        tk.Label(email_frame, text='Email (будет сгенерирован):', 
+                font=('Segoe UI', 10, 'bold'), fg=ModernColors.TEXT_PRIMARY, 
+                bg=ModernColors.SURFACE).grid(row=0, column=0, sticky='w')
+        
+        self.entry_email = tk.Entry(email_frame, font=('Segoe UI', 10), 
+                                   state='readonly', bg=ModernColors.BACKGROUND,
+                                   relief='solid', bd=1)
+        self.entry_email.grid(row=0, column=1, sticky='ew', padx=(10, 0))
         
         # Подсказка для primary email
-        tk.Label(email_frame, text='📧 Должен быть в домене @sputnik8.com', 
-                 font=('Arial', 9), fg='#666666').grid(row=1, column=1, sticky='w', padx=8)
+        tk.Label(email_frame, text='📧 Рабочая почта сотрудника в домене @sputnik8.com', 
+                 font=('Segoe UI', 9), fg=ModernColors.TEXT_SECONDARY,
+                 bg=ModernColors.SURFACE).grid(row=1, column=1, sticky='w', padx=(10, 0), pady=(2, 0))
 
         # Secondary Email
-        secondary_frame = tk.Frame(self)
-        secondary_frame.grid(row=3, column=0, columnspan=2, sticky='w', padx=16, pady=8)
+        secondary_frame = tk.Frame(inner_frame, bg=ModernColors.SURFACE)
+        secondary_frame.grid(row=3, column=0, columnspan=2, sticky='ew', pady=(12, 8))
+        secondary_frame.columnconfigure(1, weight=1)
         
-        tk.Label(secondary_frame, text='Secondary Email:', font=('Arial', 11)).grid(
-            row=0, column=0, sticky='e')
-        self.entry_secondary = tk.Entry(secondary_frame, width=50, font=('Arial', 11))
-        self.entry_secondary.grid(row=0, column=1, padx=8)
+        tk.Label(secondary_frame, text='Secondary Email:', 
+                font=('Segoe UI', 10, 'bold'), fg=ModernColors.TEXT_PRIMARY,
+                bg=ModernColors.SURFACE).grid(row=0, column=0, sticky='w')
+        
+        self.entry_secondary = self._create_modern_entry_in_frame(secondary_frame, 0, 1, 50)
         self._add_validation(self.entry_secondary, 64)
         
         # Подсказка для secondary email
         tk.Label(secondary_frame, text='💡 Может быть любой домен (Gmail, Yahoo и т.д.) для восстановления', 
-                 font=('Arial', 9), fg='#666666').grid(row=1, column=1, sticky='w', padx=8)
+                 font=('Segoe UI', 9), fg=ModernColors.TEXT_SECONDARY,
+                 bg=ModernColors.SURFACE).grid(row=1, column=1, sticky='w', padx=(10, 0), pady=(2, 0))
 
         # Phone Number
-        tk.Label(self, text='Phone Number:', font=('Arial', 11)).grid(
-            row=6, column=0, sticky='e', padx=16, pady=8)
-        self.entry_phone = tk.Entry(self, width=50, font=('Arial', 11))
-        self.entry_phone.grid(row=6, column=1, padx=8)
+        self._create_field_with_label(inner_frame, 'Phone Number:', 6)
+        self.entry_phone = self._create_modern_entry(inner_frame, 6, 50)
         self._add_validation(self.entry_phone, 20)
 
         # Organizational Unit
-        tk.Label(self, text='Подразделение (OU):', font=('Arial', 11)).grid(
-            row=7, column=0, sticky='e', padx=16, pady=8)
-        self.combo_orgunit = ttk.Combobox(self, width=47, font=('Arial', 11), state='readonly')
+        self._create_field_with_label(inner_frame, 'Подразделение (OU):', 7)
+        self.combo_orgunit = ttk.Combobox(inner_frame, font=('Segoe UI', 10), state='readonly')
         self.combo_orgunit['values'] = self.orgunit_display_names
         if self.orgunit_display_names:
             self.combo_orgunit.current(0)  # Выбираем первый элемент (корневое OU) по умолчанию
-        self.combo_orgunit.grid(row=7, column=1, padx=8, sticky='w')
+        self.combo_orgunit.grid(row=7, column=1, sticky='ew', padx=(10, 0), pady=(8, 8))
 
-        # Password
-        tk.Label(self, text='Password:', font=('Arial', 11)).grid(
-            row=8, column=0, sticky='e', padx=16, pady=8)
-        self.entry_pass = tk.Entry(self, width=36, font=('Arial', 11), show='*')
-        self.entry_pass.grid(row=8, column=1, padx=8, sticky='w')
+        # Password с кнопкой генерации в одной строке
+        password_frame = tk.Frame(inner_frame, bg=ModernColors.SURFACE)
+        password_frame.grid(row=8, column=0, columnspan=2, sticky='ew', pady=(12, 8))
+        password_frame.columnconfigure(1, weight=1)
+        
+        tk.Label(password_frame, text='Password:', 
+                font=('Segoe UI', 10, 'bold'), fg=ModernColors.TEXT_PRIMARY,
+                bg=ModernColors.SURFACE).grid(row=0, column=0, sticky='w')
+        
+        self.entry_pass = tk.Entry(password_frame, font=('Segoe UI', 10), show='*',
+                                  relief='solid', bd=1, bg='white')
+        self.entry_pass.grid(row=0, column=1, sticky='ew', padx=(10, 10))
         self._add_validation(self.entry_pass, 32)
+        # Добавляем контекстное меню для копирования/вставки
+        self._add_context_menu(self.entry_pass)
 
         # Generate Password Button
-        self.btn_gen_pass = tk.Button(self, text='🔑 Сгенерировать', 
-                                     command=self.generate_password, 
-                                     font=('Arial', 9), width=16)
-        self.btn_gen_pass.grid(row=8, column=1, padx=8, sticky='e')
+        self.btn_gen_pass = ModernButton(password_frame, text='🔑 Сгенерировать', 
+                                        command=self.generate_password, 
+                                        style='secondary',
+                                        font=('Segoe UI', 9))
+        self.btn_gen_pass.grid(row=0, column=2, padx=(0, 0))
+
+        # Кнопки действий
+        button_frame = tk.Frame(main_frame, bg=ModernColors.BACKGROUND)
+        button_frame.pack(fill='x', pady=(10, 0))
 
         # Create Button
-        self.btn_create = tk.Button(self, text='➕ Создать', command=self.create_user, 
-                                   font=('Arial', 11, 'bold'), width=18)
-        self.btn_create.grid(row=9, column=0, columnspan=2, pady=18)
-
-        # Result Text Area
-        self.txt_result = scrolledtext.ScrolledText(self, width=80, height=5, 
-                                                   wrap=tk.WORD, font=('Arial', 10))
-        self.txt_result.grid(row=10, column=0, columnspan=2, padx=16, pady=8)
-        self.txt_result.config(state=tk.DISABLED)
+        self.btn_create = ModernButton(button_frame, text='➕ Создать пользователя', 
+                                      command=self.create_user, 
+                                      style='primary',
+                                      font=('Segoe UI', 11, 'bold'))
+        self.btn_create.pack(side='left', padx=(0, 10))
 
         # Close Button
-        self.btn_close = tk.Button(self, text='❌ Закрыть', command=self.destroy, 
-                                  font=('Arial', 10), width=18)
-        self.btn_close.grid(row=11, column=0, columnspan=2, pady=(2, 12))
+        self.btn_close = ModernButton(button_frame, text='❌ Закрыть', 
+                                     command=self.destroy, 
+                                     style='secondary',
+                                     font=('Segoe UI', 10))
+        self.btn_close.pack(side='right')
+
+        # Result Text Area
+        result_frame = tk.Frame(main_frame, bg=ModernColors.BACKGROUND)
+        result_frame.pack(fill='both', expand=True, pady=(10, 0))
+        
+        tk.Label(result_frame, text='Результат операции:', 
+                font=('Segoe UI', 10, 'bold'), fg=ModernColors.TEXT_PRIMARY,
+                bg=ModernColors.BACKGROUND).pack(anchor='w')
+        
+        self.txt_result = scrolledtext.ScrolledText(result_frame, height=6, 
+                                                   wrap=tk.WORD, font=('Segoe UI', 10),
+                                                   bg='white', relief='solid', bd=1)
+        self.txt_result.pack(fill='both', expand=True, pady=(5, 0))
+        self.txt_result.config(state=tk.DISABLED)
+        
+        # Добавляем контекстное меню для области результата
+        self._add_result_context_menu(self.txt_result)
+
+    def _create_field_with_label(self, parent, text, row):
+        """Создает стандартную метку для поля"""
+        label = tk.Label(parent, text=text, font=('Segoe UI', 10, 'bold'), 
+                        fg=ModernColors.TEXT_PRIMARY, bg=ModernColors.SURFACE)
+        label.grid(row=row, column=0, sticky='w', pady=(8, 8))
+        return label
+
+    def _create_modern_entry(self, parent, row, width):
+        """Создает современное поле ввода с поддержкой копирования/вставки"""
+        entry = tk.Entry(parent, font=('Segoe UI', 10), 
+                        relief='solid', bd=1, bg='white')
+        entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=(8, 8))
+        # Добавляем контекстное меню для копирования/вставки
+        self._add_context_menu(entry)
+        return entry
+
+    def _create_modern_entry_in_frame(self, parent, row, column, width):
+        """Создает современное поле ввода в указанном фрейме"""
+        entry = tk.Entry(parent, font=('Segoe UI', 10), 
+                        relief='solid', bd=1, bg='white')
+        entry.grid(row=row, column=column, sticky='ew', padx=(10, 0))
+        # Добавляем контекстное меню для копирования/вставки
+        self._add_context_menu(entry)
+        return entry
+
+    def _add_context_menu(self, entry):
+        """Добавляет контекстное меню с операциями копирования/вставки"""
+        def show_context_menu(event):
+            try:
+                context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                context_menu.grab_release()
+
+        def copy_text():
+            try:
+                entry.clipboard_clear()
+                entry.clipboard_append(entry.selection_get())
+            except tk.TclError:
+                # Нет выделенного текста
+                pass
+
+        def paste_text():
+            try:
+                clipboard_text = entry.clipboard_get()
+                # Вставляем в позицию курсора
+                cursor_pos = entry.index(tk.INSERT)
+                entry.insert(cursor_pos, clipboard_text)
+            except tk.TclError:
+                # Буфер обмена пуст
+                pass
+
+        def cut_text():
+            try:
+                entry.clipboard_clear()
+                entry.clipboard_append(entry.selection_get())
+                entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
+            except tk.TclError:
+                # Нет выделенного текста
+                pass
+
+        def select_all():
+            entry.select_range(0, tk.END)
+
+        context_menu = tk.Menu(entry, tearoff=0)
+        context_menu.add_command(label="Копировать", command=copy_text)
+        context_menu.add_command(label="Вставить", command=paste_text)
+        context_menu.add_command(label="Вырезать", command=cut_text)
+        context_menu.add_separator()
+        context_menu.add_command(label="Выделить всё", command=select_all)
+
+        entry.bind("<Button-3>", show_context_menu)  # Правая кнопка мыши
+
+    def _add_result_context_menu(self, text_widget):
+        """Добавляет контекстное меню для области результата с операциями копирования"""
+        def show_context_menu(event):
+            try:
+                context_menu.tk_popup(event.x_root, event.y_root)
+            finally:
+                context_menu.grab_release()
+
+        def copy_selection():
+            """Копирует выделенный текст из области результата"""
+            try:
+                # Временно включаем виджет для копирования
+                current_state = text_widget.cget('state')
+                text_widget.config(state='normal')
+                
+                selected_text = text_widget.selection_get()
+                if selected_text:
+                    text_widget.clipboard_clear()
+                    text_widget.clipboard_append(selected_text)
+                
+                # Восстанавливаем состояние
+                text_widget.config(state=current_state)
+            except tk.TclError:
+                # Нет выделенного текста
+                pass
+
+        def copy_all():
+            """Копирует весь текст из области результата"""
+            try:
+                current_state = text_widget.cget('state')
+                text_widget.config(state='normal')
+                
+                all_text = text_widget.get('1.0', tk.END).strip()
+                if all_text:
+                    text_widget.clipboard_clear()
+                    text_widget.clipboard_append(all_text)
+                
+                text_widget.config(state=current_state)
+            except tk.TclError:
+                pass
+
+        def select_all():
+            """Выделяет весь текст в области результата"""
+            try:
+                current_state = text_widget.cget('state')
+                text_widget.config(state='normal')
+                
+                text_widget.tag_add('sel', '1.0', tk.END)
+                
+                text_widget.config(state=current_state)
+            except tk.TclError:
+                pass
+
+        context_menu = tk.Menu(text_widget, tearoff=0)
+        context_menu.add_command(label="📋 Копировать выделенное", command=copy_selection)
+        context_menu.add_command(label="📄 Копировать всё", command=copy_all)
+        context_menu.add_separator()
+        context_menu.add_command(label="🔍 Выделить всё", command=select_all)
+
+        text_widget.bind("<Button-3>", show_context_menu)  # Правая кнопка мыши
+        
+        # Добавляем горячие клавиши для области результата
+        text_widget.bind('<Control-c>', lambda e: copy_selection())
+        text_widget.bind('<Control-a>', lambda e: select_all())
 
     def _add_validation(self, entry: tk.Entry, maxlen: int):
         """Добавляет валидацию длины для поля ввода"""
@@ -155,6 +358,51 @@ class CreateUserWindow(tk.Toplevel):
         """Привязывает события"""
         self.entry_first.bind('<KeyRelease>', self.update_email)
         self.entry_last.bind('<KeyRelease>', self.update_email)
+        
+        # Добавляем горячие клавиши для копирования/вставки ко всем полям
+        self._bind_hotkeys(self.entry_first)
+        self._bind_hotkeys(self.entry_last)
+        self._bind_hotkeys(self.entry_secondary)
+        self._bind_hotkeys(self.entry_phone)
+        self._bind_hotkeys(self.entry_pass)
+
+    def _bind_hotkeys(self, entry):
+        """Добавляет стандартные горячие клавиши для копирования/вставки"""
+        entry.bind('<Control-c>', lambda e: self._copy_selection(entry))
+        entry.bind('<Control-v>', lambda e: self._paste_clipboard(entry))
+        entry.bind('<Control-x>', lambda e: self._cut_selection(entry))
+        entry.bind('<Control-a>', lambda e: self._select_all(entry))
+
+    def _copy_selection(self, entry):
+        """Копирует выделенный текст"""
+        try:
+            entry.clipboard_clear()
+            entry.clipboard_append(entry.selection_get())
+        except tk.TclError:
+            pass
+
+    def _paste_clipboard(self, entry):
+        """Вставляет текст из буфера обмена"""
+        try:
+            clipboard_text = entry.clipboard_get()
+            cursor_pos = entry.index(tk.INSERT)
+            entry.insert(cursor_pos, clipboard_text)
+        except tk.TclError:
+            pass
+
+    def _cut_selection(self, entry):
+        """Вырезает выделенный текст"""
+        try:
+            entry.clipboard_clear()
+            entry.clipboard_append(entry.selection_get())
+            entry.delete(tk.SEL_FIRST, tk.SEL_LAST)
+        except tk.TclError:
+            pass
+
+    def _select_all(self, entry):
+        """Выделяет весь текст в поле"""
+        entry.select_range(0, tk.END)
+        return 'break'  # Предотвращаем дальнейшую обработку события
 
     def update_email(self, event=None):
         """Автоматически формирует email по шаблону имя.фамилия@sputnik8.com"""
@@ -162,6 +410,7 @@ class CreateUserWindow(tk.Toplevel):
         last = self.entry_last.get().strip().lower().replace(' ', '')
         
         if first and last:
+            # Жестко задаем рабочий домен sputnik8.com для сотрудников
             email = f"{first}.{last}@sputnik8.com"
         else:
             email = ""
@@ -249,12 +498,13 @@ class CreateUserWindow(tk.Toplevel):
 class EditUserWindow(tk.Toplevel):
     """Окно для выбора, редактирования и удаления пользователя Google Workspace"""
     
-    def __init__(self, master, service: Any):
+    def __init__(self, master, service: Any, on_updated: Optional[callable] = None):
         super().__init__(master)
         self.title('Изменить данные пользователя')
         self.geometry('800x550')  # Увеличиваем высоту для нового поля OU
         self.resizable(False, False)
         self.service = service
+        self.on_updated = on_updated
         self.configure(bg='SystemButtonFace')
         self.transient(master)
         if master:
@@ -466,6 +716,10 @@ class EditUserWindow(tk.Toplevel):
         # Объединяем все результаты
         final_result = "\n".join(result_messages) if result_messages else "Нет изменений для применения"
         self._show_result(final_result)
+        
+        # Вызываем callback если есть изменения
+        if self.on_updated and result_messages:
+            self.on_updated()
 
     def delete_user(self):
         """Удаление пользователя"""
@@ -497,6 +751,10 @@ class EditUserWindow(tk.Toplevel):
                 self.entry_first.delete(0, tk.END)
                 self.entry_last.delete(0, tk.END)
                 self.entry_pass.delete(0, tk.END)
+                
+                # Вызываем callback при успешном удалении
+                if self.on_updated:
+                    self.on_updated()
                 
         except Exception as e:
             self._show_result(f'Ошибка удаления пользователя: {e}')

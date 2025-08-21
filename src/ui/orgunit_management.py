@@ -28,7 +28,18 @@ class OrgUnitManagementWindow(tk.Toplevel):
     def __init__(self, master, service: Any):
         super().__init__(master)
         self.title('Управление организационными подразделениями')
-        self.geometry('1000x700')
+        # Применяем единый стиль окна и центрирование
+        try:
+            from .modern_styles import apply_modern_window_style, center_window_modern
+            apply_modern_window_style(self, 'orgunit_management')
+            if master:
+                center_window_modern(self, master)
+        except Exception:
+            self.geometry('1000x700')
+            self.configure(bg=ModernColors.BACKGROUND)
+            if master:
+                center_window(self, master)
+        
         self.resizable(True, True)
         self.service = service
         self.configure(bg='SystemButtonFace')
@@ -65,7 +76,7 @@ class OrgUnitManagementWindow(tk.Toplevel):
     def _create_widgets(self):
         """Создает виджеты окна"""
         # Основной контейнер с горизонтальным разделением
-        main_frame = tk.Frame(self, bg='SystemButtonFace')
+        main_frame = tk.Frame(self, bg=ModernColors.BACKGROUND)
         main_frame.pack(fill='both', expand=True, padx=10, pady=10)
 
         # Левая панель - фильтр по OU
@@ -79,17 +90,17 @@ class OrgUnitManagementWindow(tk.Toplevel):
 
     def _create_filter_panel(self, parent):
         """Создает панель фильтрации по OU"""
-        filter_frame = tk.Frame(parent, bg='SystemButtonFace', relief='ridge', bd=1)
+        filter_frame = tk.Frame(parent, bg=ModernColors.SURFACE, relief='ridge', bd=1)
         filter_frame.pack(side='left', fill='y', padx=(0, 5))
 
         tk.Label(filter_frame, text='📁 Фильтр по подразделению', 
-                bg='SystemButtonFace', font=('Arial', 11, 'bold')).pack(pady=(10, 5))
+                bg=ModernColors.SURFACE, fg=ModernColors.TEXT_PRIMARY, font=('Segoe UI', 11, 'bold')).pack(pady=(10, 5))
         
         # Выбор OU для фильтрации
-        tk.Label(filter_frame, text='Подразделение:', bg='SystemButtonFace', 
-                font=('Arial', 10)).pack(anchor='w', padx=10)
+        tk.Label(filter_frame, text='Подразделение:', bg=ModernColors.SURFACE, fg=ModernColors.TEXT_PRIMARY, 
+                font=('Segoe UI', 9)).pack(anchor='w', padx=10)
         
-        self.filter_combo = ttk.Combobox(filter_frame, width=25, font=('Arial', 10), state='readonly')
+        self.filter_combo = ttk.Combobox(filter_frame, width=25, font=('Segoe UI', 9), state='readonly')
         filter_values = ["Все подразделения"] + self.orgunit_display_names
         self.filter_combo['values'] = filter_values
         self.filter_combo.current(0)
@@ -98,22 +109,22 @@ class OrgUnitManagementWindow(tk.Toplevel):
 
         # Кнопка обновления
         tk.Button(filter_frame, text='🔄 Обновить', command=self._refresh_data,
-                 font=('Arial', 10), width=20).pack(padx=10, pady=10)
+                 font=('Segoe UI', 9), width=20, bg=ModernColors.PRIMARY, fg='white', relief='flat', cursor='hand2').pack(padx=10, pady=10)
 
         # Статистика
-        self.stats_label = tk.Label(filter_frame, text='', bg='SystemButtonFace', 
-                                   font=('Arial', 9), justify='left')
+        self.stats_label = tk.Label(filter_frame, text='', bg=ModernColors.SURFACE, fg=ModernColors.TEXT_SECONDARY, 
+                                   font=('Segoe UI', 9), justify='left')
         self.stats_label.pack(padx=10, pady=10, anchor='w')
         
         self._update_stats()
 
     def _create_users_panel(self, parent):
         """Создает панель со списком пользователей"""
-        users_frame = tk.Frame(parent, bg='SystemButtonFace', relief='ridge', bd=1)
+        users_frame = tk.Frame(parent, bg=ModernColors.SURFACE, relief='ridge', bd=1)
         users_frame.pack(side='left', fill='both', expand=True, padx=5)
 
         tk.Label(users_frame, text='👥 Пользователи', 
-                bg='SystemButtonFace', font=('Arial', 11, 'bold')).pack(pady=(10, 5))
+                bg=ModernColors.SURFACE, fg=ModernColors.TEXT_PRIMARY, font=('Segoe UI', 11, 'bold')).pack(pady=(10, 5))
 
         # Список пользователей с Treeview для показа OU
         self.users_tree = ttk.Treeview(users_frame, columns=('email', 'name', 'ou'), show='headings', height=25)
@@ -139,17 +150,17 @@ class OrgUnitManagementWindow(tk.Toplevel):
 
     def _create_operations_panel(self, parent):
         """Создает панель операций"""
-        ops_frame = tk.Frame(parent, bg='SystemButtonFace', relief='ridge', bd=1)
+        ops_frame = tk.Frame(parent, bg=ModernColors.SURFACE, relief='ridge', bd=1)
         ops_frame.pack(side='right', fill='y', padx=(5, 0))
 
         tk.Label(ops_frame, text='⚙️ Операции', 
-                bg='SystemButtonFace', font=('Arial', 11, 'bold')).pack(pady=(10, 15))
+                bg=ModernColors.SURFACE, fg=ModernColors.TEXT_PRIMARY, font=('Segoe UI', 11, 'bold')).pack(pady=(10, 15))
 
         # Выбор целевого OU
-        tk.Label(ops_frame, text='Переместить в:', bg='SystemButtonFace', 
-                font=('Arial', 10)).pack(anchor='w', padx=10)
+        tk.Label(ops_frame, text='Переместить в:', bg=ModernColors.SURFACE, fg=ModernColors.TEXT_PRIMARY, 
+                font=('Segoe UI', 9)).pack(anchor='w', padx=10)
         
-        self.target_combo = ttk.Combobox(ops_frame, width=25, font=('Arial', 10), state='readonly')
+        self.target_combo = ttk.Combobox(ops_frame, width=25, font=('Segoe UI', 9), state='readonly')
         self.target_combo['values'] = self.orgunit_display_names
         if self.orgunit_display_names:
             self.target_combo.current(0)
@@ -157,43 +168,43 @@ class OrgUnitManagementWindow(tk.Toplevel):
 
         # Кнопки операций
         tk.Button(ops_frame, text='📁 Переместить выбранного', 
-                 command=self._move_selected_user, font=('Arial', 10), 
-                 width=22).pack(padx=10, pady=5)
+                 command=self._move_selected_user, font=('Segoe UI', 9), 
+                 width=22, bg=ModernColors.PRIMARY, fg='white', relief='flat', cursor='hand2').pack(padx=10, pady=5)
 
         tk.Button(ops_frame, text='📁 Переместить всех видимых', 
-                 command=self._move_all_visible_users, font=('Arial', 10), 
-                 width=22).pack(padx=10, pady=5)
+                 command=self._move_all_visible_users, font=('Segoe UI', 9), 
+                 width=22, bg=ModernColors.SECONDARY, fg='white', relief='flat', cursor='hand2').pack(padx=10, pady=5)
 
         # Разделитель
-        tk.Frame(ops_frame, height=2, bg='gray50').pack(fill='x', padx=10, pady=10)
+        tk.Frame(ops_frame, height=2, bg=ModernColors.BORDER).pack(fill='x', padx=10, pady=10)
 
         # Кнопка создания нового OU
         tk.Button(ops_frame, text='➕ Создать подразделение', 
-                 command=self._create_new_orgunit, font=('Arial', 10, 'bold'), 
-                 width=22).pack(padx=10, pady=5)
+                 command=self._create_new_orgunit, font=('Segoe UI', 9, 'bold'), 
+                 width=22, bg=ModernColors.SUCCESS, fg='white', relief='flat', cursor='hand2').pack(padx=10, pady=5)
 
         # Разделитель
-        tk.Frame(ops_frame, height=2, bg='gray50').pack(fill='x', padx=10, pady=15)
+        tk.Frame(ops_frame, height=2, bg=ModernColors.BORDER).pack(fill='x', padx=10, pady=15)
 
         # Информация о выбранном пользователе
-        tk.Label(ops_frame, text='ℹ️ Информация:', bg='SystemButtonFace', 
-                font=('Arial', 10, 'bold')).pack(anchor='w', padx=10)
+        tk.Label(ops_frame, text='ℹ️ Информация:', bg=ModernColors.SURFACE, fg=ModernColors.TEXT_PRIMARY, 
+                font=('Segoe UI', 9, 'bold')).pack(anchor='w', padx=10)
         
-        self.info_label = tk.Label(ops_frame, text='Выберите пользователя', bg='SystemButtonFace', 
-                                  font=('Arial', 9), justify='left', wraplength=200)
+        self.info_label = tk.Label(ops_frame, text='Выберите пользователя', bg=ModernColors.SURFACE, fg=ModernColors.TEXT_SECONDARY, 
+                                  font=('Segoe UI', 9), justify='left', wraplength=200)
         self.info_label.pack(anchor='w', padx=10, pady=5)
 
         # Область результатов
-        tk.Label(ops_frame, text='📋 Результаты:', bg='SystemButtonFace', 
-                font=('Arial', 10, 'bold')).pack(anchor='w', padx=10, pady=(15, 5))
+        tk.Label(ops_frame, text='📋 Результаты:', bg=ModernColors.SURFACE, fg=ModernColors.TEXT_PRIMARY, 
+                font=('Segoe UI', 9, 'bold')).pack(anchor='w', padx=10, pady=(15, 5))
         
         self.result_text = scrolledtext.ScrolledText(ops_frame, width=30, height=10, 
-                                                    wrap=tk.WORD, font=('Arial', 9))
+                                                    wrap=tk.WORD, font=('Segoe UI', 9))
         self.result_text.pack(padx=10, pady=5)
 
         # Кнопка закрытия
         tk.Button(ops_frame, text='❌ Закрыть', command=self.destroy, 
-                 font=('Arial', 10), width=22).pack(padx=10, pady=(10, 20))
+                 font=('Segoe UI', 9), width=22, bg=ModernColors.DANGER, fg='white', relief='flat', cursor='hand2').pack(padx=10, pady=(10, 20))
 
         # Привязываем событие выбора пользователя
         self.users_tree.bind('<<TreeviewSelect>>', self._on_user_select)

@@ -141,15 +141,39 @@ def create_user(service: Any, email: str, first_name: str, last_name: str,
     
     email_domain = email.split('@')[-1]
     
-    # Получаем домен workspace из конфигурации
+    # Получаем доступные домены из Google Workspace
     try:
-        from ..config.enhanced_config import config
-        workspace_domain = config.settings.google_workspace_domain
-    except ImportError:
-        workspace_domain = "sputnik8.com"  # Fallback
+        # Пробуем получить информацию о домене из существующих пользователей
+        result = service.users().list(domain=email_domain, maxResults=1).execute()
+        # Если запрос успешен, значит домен допустим
+        allowed_domains = [email_domain]
+    except Exception as domain_check_error:
+        # Если не удалось проверить напрямую, используем конфигурацию
+        try:
+            from ..config.enhanced_config import config
+            workspace_domain = config.settings.google_workspace_domain
+            allowed_domains = [workspace_domain]
+        except ImportError:
+            workspace_domain = "sputnik8.com"  # Fallback
+            allowed_domains = [workspace_domain]
+        
+        # Также пробуем получить домены из существующих пользователей
+        try:
+            existing_users = service.users().list(maxResults=5).execute()
+            if 'users' in existing_users:
+                detected_domains = set()
+                for user in existing_users['users']:
+                    if 'primaryEmail' in user:
+                        domain = user['primaryEmail'].split('@')[-1]
+                        detected_domains.add(domain)
+                if detected_domains:
+                    allowed_domains = list(detected_domains)
+                    print(f"[create_user] Автоматически определены домены: {allowed_domains}")
+        except Exception as detect_error:
+            print(f"[create_user] Не удалось определить домены автоматически: {detect_error}")
     
-    if email_domain != workspace_domain:
-        return f'Ошибка: Можно создавать пользователей только в домене {workspace_domain}. Указанный email относится к домену {email_domain}.'
+    if email_domain not in allowed_domains:
+        return f'Ошибка: Можно создавать пользователей только в доменах: {", ".join(allowed_domains)}. Указанный email относится к домену {email_domain}.'
     
     # Проверяем существование пользователя
     print(f"[create_user] Проверка существования пользователя: {email}")

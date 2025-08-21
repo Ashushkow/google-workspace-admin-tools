@@ -251,16 +251,14 @@ class AddToGroupWindow(tk.Toplevel):
                 messagebox.showerror('Ошибка', 'У выбранной группы нет email')
                 return
                 
-            success = add_user_to_group(self.service, user_email, group_email)
+            result = add_user_to_group(self.service, group_email, user_email)
             
-            if success:
-                messagebox.showinfo(
-                    'Успех', 
-                    f'Пользователь {user_email} добавлен в группу {selected_group.get("name")}'
-                )
+            # Проверяем результат операции
+            if result.startswith('✅') or result.startswith('ℹ️'):
+                messagebox.showinfo('Успех', result)
                 self.destroy()
             else:
-                messagebox.showerror('Ошибка', 'Не удалось добавить пользователя в группу')
+                messagebox.showerror('Ошибка', result)
                 
         except Exception as e:
             messagebox.showerror('Ошибка', f'Ошибка при добавлении в группу: {str(e)}')

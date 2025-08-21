@@ -147,7 +147,8 @@ class HealthChecker:
         issues = []
         
         try:
-            creds_path = Path(config.settings.google_application_credentials)
+            # Используем правильный путь с поддержкой bundle
+            creds_path = config.google.get_credentials_path()
             
             if not creds_path.exists():
                 issues.append(HealthIssue(
@@ -189,28 +190,21 @@ class HealthChecker:
         required_dirs = ["logs", "data", "cache", "temp"]
         
         for dir_name in required_dirs:
-            dir_path = Path(dir_name)
-            
-            if not dir_path.exists():
-                try:
-                    dir_path.mkdir(parents=True, exist_ok=True)
-                    issues.append(HealthIssue(
-                        component="directories",
-                        severity="info",
-                        message=f"Создана директория: {dir_name}"
-                    ))
-                except Exception as e:
-                    issues.append(HealthIssue(
-                        component="directories",
-                        severity="critical",
-                        message=f"Не удалось создать директорию {dir_name}: {e}"
-                    ))
-            
-            elif not dir_path.is_dir():
+            try:
+                from ..utils.resource_path import ensure_resource_dir
+                dir_path = ensure_resource_dir(dir_name)
+                
+                issues.append(HealthIssue(
+                    component="directories",
+                    severity="info",
+                    message=f"Директория {dir_name} готова: {dir_path}"
+                ))
+                
+            except Exception as e:
                 issues.append(HealthIssue(
                     component="directories",
                     severity="critical",
-                    message=f"{dir_name} не является директорией"
+                    message=f"Не удалось создать директорию {dir_name}: {e}"
                 ))
         
         return issues
@@ -245,8 +239,8 @@ class HealthChecker:
         issues = []
         
         try:
-            # Проверяем наличие credentials файла
-            creds_path = Path(config.settings.google_application_credentials)
+            # Проверяем наличие credentials файла с поддержкой bundle
+            creds_path = config.google.get_credentials_path()
             if not creds_path.exists():
                 issues.append(HealthIssue(
                     component="google_api",
@@ -498,12 +492,15 @@ def is_healthy() -> bool:
         True если система работает
     """
     try:
-        # Базовые проверки
-        if not Path("credentials.json").exists():
+        # Базовые проверки с поддержкой bundle
+        creds_path = config.google.get_credentials_path()
+        if not creds_path.exists():
             return False
         
-        if not Path("logs").exists():
-            return False
+        from ..utils.resource_path import get_resource_path
+        logs_path = get_resource_path("logs")
+        if not logs_path.exists():
+            logs_path.mkdir(parents=True, exist_ok=True)
         
         return True
     

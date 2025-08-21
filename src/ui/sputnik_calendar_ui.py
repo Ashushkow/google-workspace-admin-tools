@@ -152,9 +152,17 @@ class SputnikCalendarWindow(tk.Toplevel):
             search_frame,
             textvariable=self.search_var,
             font=('Arial', 10),
+            bg=ModernColors.SURFACE,
+            fg=ModernColors.TEXT_PRIMARY,
+            insertbackground=ModernColors.TEXT_PRIMARY,
+            relief='flat',
+            bd=1,
+            highlightthickness=1,
+            highlightcolor=ModernColors.PRIMARY,
+            highlightbackground=ModernColors.BORDER,
             width=30
         )
-        search_entry.pack(side='left', padx=(0, 10))
+        search_entry.pack(side='left', padx=(0, 10), ipady=3)
         
         # Фильтр по роли
         tk.Label(
@@ -246,16 +254,11 @@ class SputnikCalendarWindow(tk.Toplevel):
         load_more_frame = tk.Frame(main_frame, bg=ModernColors.BACKGROUND)
         load_more_frame.pack(fill='x', pady=(5, 10))
         
-        self.load_more_button = tk.Button(
+        self.load_more_button = ModernButton(
             load_more_frame,
             text='📥 Загрузить больше пользователей (100→500)',
             command=self.load_more_users,
-            bg=ModernColors.PRIMARY,
-            fg='white',
-            font=('Arial', 9),
-            relief='flat',
-            padx=10,
-            pady=5
+            style='primary'
         )
         self.load_more_button.pack(anchor='center')
         self.load_more_button.pack_forget()  # Скрываем изначально
@@ -842,19 +845,23 @@ class AddSputnikMemberDialog(tk.Toplevel):
     
     def setup_ui(self):
         """Настройка UI диалога"""
-        # Заголовок
+        # Заголовок с современным дизайном
+        header_frame = tk.Frame(self, bg=ModernColors.PRIMARY, height=60)
+        header_frame.pack(fill='x', pady=(0, 0))
+        header_frame.pack_propagate(False)
+        
         header_label = tk.Label(
-            self,
+            header_frame,
             text='➕ Добавить участника к календарю SPUTНIK',
-            font=('Arial', 13, 'bold'),
-            bg=ModernColors.BACKGROUND,
-            fg=ModernColors.TEXT_PRIMARY
+            font=('Arial', 14, 'bold'),
+            bg=ModernColors.PRIMARY,
+            fg='white'
         )
-        header_label.pack(pady=10)
+        header_label.pack(expand=True)
         
         # Основной контейнер
         main_frame = tk.Frame(self, bg=ModernColors.BACKGROUND)
-        main_frame.pack(fill='both', expand=True, padx=15, pady=8)
+        main_frame.pack(fill='both', expand=True, padx=20, pady=15)
         
         # Поиск сотрудников
         search_frame = tk.Frame(main_frame, bg=ModernColors.BACKGROUND)
@@ -874,9 +881,16 @@ class AddSputnikMemberDialog(tk.Toplevel):
             search_frame, 
             textvariable=self.search_var,
             font=('Arial', 11), 
-            width=50
+            bg=ModernColors.SURFACE,
+            fg=ModernColors.TEXT_PRIMARY,
+            insertbackground=ModernColors.TEXT_PRIMARY,
+            relief='flat',
+            bd=1,
+            highlightthickness=1,
+            highlightcolor=ModernColors.PRIMARY,
+            highlightbackground=ModernColors.BORDER
         )
-        search_entry.pack(fill='x', pady=(0, 5))
+        search_entry.pack(fill='x', pady=(0, 5), ipady=5)
         search_entry.focus()
         
         # Статус загрузки с кнопкой отмены
@@ -892,16 +906,11 @@ class AddSputnikMemberDialog(tk.Toplevel):
         )
         self.loading_label.pack(side='left')
         
-        self.cancel_button = tk.Button(
+        self.cancel_button = ModernButton(
             loading_frame,
             text='❌ Отмена',
             command=self.cancel_loading,
-            bg=ModernColors.ERROR,
-            fg='white',
-            font=('Arial', 8),
-            relief='flat',
-            padx=8,
-            pady=2
+            style='danger'
         )
         self.cancel_button.pack(side='right')
         self.cancel_button.pack_forget()  # Скрываем изначально
@@ -952,16 +961,11 @@ class AddSputnikMemberDialog(tk.Toplevel):
         load_more_frame = tk.Frame(main_frame, bg=ModernColors.BACKGROUND)
         load_more_frame.pack(fill='x', pady=(5, 10))
         
-        self.load_more_button = tk.Button(
+        self.load_more_button = ModernButton(
             load_more_frame,
             text='📥 Загрузить больше пользователей (50→500)',
             command=self.load_more_users,
-            bg=ModernColors.PRIMARY,
-            fg='white',
-            font=('Arial', 9),
-            relief='flat',
-            padx=10,
-            pady=5
+            style='primary'
         )
         self.load_more_button.pack(anchor='center')
         self.load_more_button.pack_forget()  # Скрываем изначально
@@ -1002,9 +1006,14 @@ class AddSputnikMemberDialog(tk.Toplevel):
                 value=role_value,
                 bg=ModernColors.BACKGROUND,
                 fg=ModernColors.TEXT_PRIMARY,
-                selectcolor=ModernColors.SURFACE,
+                selectcolor=ModernColors.PRIMARY,
+                activebackground=ModernColors.BACKGROUND,
+                activeforeground=ModernColors.TEXT_PRIMARY,
                 font=('Arial', 9, 'bold'),
-                justify='left'
+                justify='left',
+                relief='flat',
+                bd=0,
+                highlightthickness=0
             )
             role_button.pack(anchor='w')
             
@@ -1020,8 +1029,16 @@ class AddSputnikMemberDialog(tk.Toplevel):
             desc_label.pack(anchor='w')
         
         # Информация о выбранном пользователе
-        self.selected_info_frame = tk.Frame(main_frame, bg=ModernColors.SURFACE, relief='groove', bd=1)
-        self.selected_info_frame.pack(fill='x', pady=(0, 10))
+        self.selected_info_frame = tk.Frame(
+            main_frame, 
+            bg=ModernColors.SURFACE, 
+            relief='flat', 
+            bd=1,
+            highlightbackground=ModernColors.BORDER,
+            highlightcolor=ModernColors.PRIMARY,
+            highlightthickness=1
+        )
+        self.selected_info_frame.pack(fill='x', pady=(0, 10), ipady=2)
         
         self.selected_label = tk.Label(
             self.selected_info_frame,
@@ -1029,8 +1046,8 @@ class AddSputnikMemberDialog(tk.Toplevel):
             bg=ModernColors.SURFACE,
             fg=ModernColors.TEXT_SECONDARY,
             font=('Arial', 9, 'italic'),
-            padx=8,
-            pady=5
+            padx=12,
+            pady=8
         )
         self.selected_label.pack(fill='x')
         
@@ -1272,16 +1289,38 @@ class AddSputnikMemberDialog(tk.Toplevel):
     
     def _create_fallback_users(self):
         """Создание примеров пользователей для демонстрации"""
+        self.loading_label.config(
+            text='⚠️ Не удалось загрузить пользователей из Google Workspace',
+            fg='orange'
+        )
+        
+        # Пытаемся получить реальный домен из конфигурации
+        configured_domain = self._get_configured_domain()
+        
         fallback_users = [
-            {'email': 'andrei.shushkov@sputnik8.com', 'name': 'Андрей Шушков', 'suspended': False, 'status': 'Активен'},
-            {'email': 'valerii.sergeev@sputnik8.com', 'name': 'Валерий Сергеев', 'suspended': False, 'status': 'Активен'},
-            {'email': 'alice.grigoreva@sputnik8.com', 'name': 'Алиса Григорьева', 'suspended': False, 'status': 'Активен'},
-            {'email': 'igor.petrov@sputnik8.com', 'name': 'Игорь Петров', 'suspended': False, 'status': 'Активен'},
-            {'email': 'margarita.titova@sputnik8.com', 'name': 'Маргарита Титова', 'suspended': False, 'status': 'Активен'},
-            {'email': 'evgeniia.matveeva@sputnik8.com', 'name': 'Евгения Матвеева', 'suspended': False, 'status': 'Активен'},
-            {'email': 'example.user@sputnik8.com', 'name': 'Новый Сотрудник', 'suspended': False, 'status': 'Активен'},
+            {'email': f'demo1@{configured_domain}', 'name': 'Демо Пользователь 1 (ТЕСТ)', 'suspended': False, 'status': 'Демо'},
+            {'email': f'demo2@{configured_domain}', 'name': 'Демо Пользователь 2 (ТЕСТ)', 'suspended': False, 'status': 'Демо'},
+            {'email': f'admin@{configured_domain}', 'name': 'Администратор (ТЕСТ)', 'suspended': False, 'status': 'Демо'},
         ]
+        
         self._update_users_list(fallback_users)
+        
+    def _get_configured_domain(self) -> str:
+        """Получить настроенный домен из конфигурации"""
+        try:
+            # Импортируем конфигурацию из нашей системы настроек
+            import sys
+            import os
+            sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+            from config.enhanced_config import config
+            
+            domain = config.settings.google_workspace_domain
+            if domain and domain != "yourdomain.com" and domain != "example.com":
+                return domain
+            return "example.com"
+        except Exception as e:
+            print(f"Ошибка получения домена: {e}")
+            return "example.com"
     
     def _update_users_list(self, users):
         """Обновление списка пользователей"""

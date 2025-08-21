@@ -1,0 +1,10 @@
+{
+  "server_url": "https://ipa002.infra.int.sputnik8.com/",
+  "domain": "infra.int.sputnik8.com",
+  "username": "Ashushkow",
+  "password": "Kudrovo95!",
+  "use_kerberos": false,
+  "verify_ssl": false,
+  "ca_cert_path": null,
+  "timeout": 30
+}

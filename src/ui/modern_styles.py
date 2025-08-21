@@ -7,28 +7,68 @@
 import tkinter as tk
 from tkinter import ttk
 
+# Подключаем менеджер тем для единого источника правды
+from ..themes.theme_manager import theme_manager
+
 
 class ModernColors:
     """
     Центральная палитра цветов для современного интерфейса.
-    Использует Material Design принципы.
+    Теперь значения динамически подстраиваются под активную тему через ThemeManager.
+    Сохраняет прежний API (атрибуты в UPPER_CASE), чтобы не ломать существующий код.
     """
+    # Значения по умолчанию (fallback), используются до применения темы и для ключей, которых нет в теме
     PRIMARY = "#2563eb"       # Основной синий цвет
     PRIMARY_DARK = "#1d4ed8"  # Темно-синий для hover эффектов
     PRIMARY_LIGHT = "#3b82f6" # Светло-синий для выделений
     SUCCESS = "#10b981"       # Зеленый для успешных операций
     WARNING = "#f59e0b"       # Оранжевый для предупреждений
     DANGER = "#ef4444"        # Красный для ошибок и удаления
-    ERROR = "#ef4444"         # Алиас для DANGER (совместимость)
+    ERROR = DANGER             # Алиас для DANGER (совместимость)
     SECONDARY = "#374151"     # Темно-серый для второстепенных элементов
     SECONDARY_DARK = "#111827" # Почти черный для hover
     BACKGROUND = "#f8fafc"    # Светло-серый фон приложения
-    SURFACE = "#ffffff"       # Белый фон для карточек
-    CARD_BG = "#ffffff"       # Белый фон для карточек (алиас)
+    SURFACE = "#ffffff"       # Поверхности/карточки
+    CARD_BG = "#ffffff"       # Алиас для SURFACE
     TEXT_PRIMARY = "#1f2937"  # Основной цвет текста
     TEXT_SECONDARY = "#6b7280" # Вторичный цвет текста
     BORDER = "#e5e7eb"        # Цвет границ
     INFO = "#0ea5e9"          # Информационный цвет
+
+    @classmethod
+    def apply_theme(cls, theme):
+        """Применяет цвета активной темы к палитре ModernColors."""
+        if not theme:
+            return
+        # Отображение ключей из ThemeManager в локальные токены
+        cls.PRIMARY = theme.get_color('accent', cls.PRIMARY)
+        cls.PRIMARY_DARK = theme.get_color('accent_hover', cls.PRIMARY_DARK)
+        # У тем нет отдельного accent_light — используем accent
+        cls.PRIMARY_LIGHT = theme.get_color('accent', cls.PRIMARY_LIGHT)
+
+        cls.SUCCESS = theme.get_color('success', cls.SUCCESS)
+        cls.WARNING = theme.get_color('warning', cls.WARNING)
+        cls.DANGER = theme.get_color('error', cls.DANGER)
+        cls.ERROR = cls.DANGER
+
+        # Поверхности и фон
+        cls.BACKGROUND = theme.get_color('background', cls.BACKGROUND)
+        secondary_surface = theme.get_color('secondary', cls.SURFACE)
+        cls.SURFACE = secondary_surface
+        cls.CARD_BG = secondary_surface
+
+        # Текст и границы
+        cls.TEXT_PRIMARY = theme.get_color('text_primary', cls.TEXT_PRIMARY)
+        cls.TEXT_SECONDARY = theme.get_color('text_secondary', cls.TEXT_SECONDARY)
+        cls.BORDER = theme.get_color('border', cls.BORDER)
+
+        # Вторичные/нейтральные
+        # Если в теме нет отдельного SECONDARY_DARK — сохраняем дефолт
+        cls.SECONDARY = theme.get_color('secondary', cls.SECONDARY)
+        # SECONDARY_DARK оставляем как есть (можно вычислять по теме при необходимости)
+
+        # Информационный
+        cls.INFO = theme.get_color('info', cls.INFO)
 
 
 class ModernWindowConfig:
@@ -38,14 +78,16 @@ class ModernWindowConfig:
     WINDOW_SIZES = {
         'create_user': '580x520',      # Было 700x650
         'edit_user': '880x580',        # Было 900x650
-        'group_management': '900x650', # Было 1000x700
+        'group_management': '780x580', # Было 900x650, оптимизировано
         'group_edit': '480x420',       # Было 500x450
         'asana_invite': '380x240',     # Было 420x270
         'error_log': '720x480',        # Было 800x500
         'add_to_group': '420x350',     # Новый размер
         'user_selection': '450x380',   # Было 500x400
         'employee_list': '800x600',    # Компактный размер
-        'freeipa_management': '750x580' # Было 800x600
+        'freeipa_management': '750x580', # Было 800x600
+        'orgunit_management': '950x680', # Оптимизировано с 1000x700
+        'document_management': '650x480' # Новый: окно управления документами
     }
     
     # Отступы и размеры (уменьшенные для компактности)
@@ -282,3 +324,17 @@ def center_window_modern(window, parent=None):
         y = (sh - wh) // 2
     
     window.geometry(f'+{x}+{y}')
+
+
+# Применяем активную тему при импорте и подписываемся на изменения темы
+try:
+    if theme_manager.current_theme:
+        ModernColors.apply_theme(theme_manager.current_theme)
+
+    # Обновление палитры при смене темы
+    def _on_theme_change(theme):
+        ModernColors.apply_theme(theme)
+    theme_manager.add_theme_change_callback(_on_theme_change)
+except Exception:
+    # В случае проблем с темами остаемся на значениях по умолчанию
+    pass

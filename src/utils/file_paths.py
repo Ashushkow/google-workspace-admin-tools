@@ -91,9 +91,7 @@ class FilePathManager:
             
         # Файлы безопасности
         elif any(keyword in lower_filename for keyword in ['credentials', 'token', 'key', 'cert']):
-            # Оставляем credentials в корне для совместимости
-            if 'credentials' in lower_filename:
-                return self.project_root / filename
+            # Хранение секретов в каталоге безопасности, путь можно переопределить через конфиг
             return self.directories['security'] / filename
             
         # Тестовые файлы

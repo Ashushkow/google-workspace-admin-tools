@@ -138,11 +138,11 @@ class EnvironmentValidator:
     
     def _validate_credentials(self):
         """Валидация файла credentials"""
-        credentials_path = Path('credentials.json')
+        credentials_path = Path('config/credentials.json')
         
         if not credentials_path.exists():
             self.warnings.append(
-                "Файл credentials.json не найден. "
+                "Файл config/credentials.json не найден. "
                 "Он необходим для работы с Google API. "
                 "См. docs/API_SETUP.md"
             )

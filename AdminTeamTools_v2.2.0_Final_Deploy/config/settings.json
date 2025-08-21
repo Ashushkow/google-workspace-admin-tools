@@ -1,0 +1,16 @@
+{
+  "log_file": "admin_log.json",
+  "default_orgunit": "all",
+  "window_size": "900x600",
+  "users_per_page": 100,
+  "groups_per_page": 100,
+  "asana_workspace": "sputnik8.com",
+  "asana_token_env": "ASANA_API_TOKEN",
+  "smtp": {
+    "server": "smtp.gmail.com",
+    "port": 587,
+    "user_env": "SMTP_USER",
+    "password_env": "SMTP_PASSWORD"
+  },
+  "language": "ru"
+}

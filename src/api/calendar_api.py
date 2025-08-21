@@ -6,6 +6,7 @@ Google Calendar API для управления календарями и их �
 """
 
 import logging
+import os
 from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass
 
@@ -16,11 +17,13 @@ try:
     from google_auth_oauthlib.flow import InstalledAppFlow
     from google.auth.transport.requests import Request
     import pickle
-    import os
 except ImportError as e:
     logging.warning(f"Google API библиотеки не установлены: {e}")
     build = None
     HttpError = Exception
+
+# Пути проекта
+from ..utils.file_paths import get_config_path
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +64,46 @@ class GoogleCalendarAPI:
         Args:
             credentials_path: Путь к файлу с учетными данными
         """
-        self.credentials_path = credentials_path
+        # Разрешаем путь к credentials: ENV -> config/ -> переданный -> локальный
+        self.credentials_path = self._resolve_credentials_path(credentials_path)
         self.service = None
         self.credentials = None
+        # Храним токен в конфиге, чтобы не плодить файлы в корне
+        self._token_path = str(get_config_path('token.pickle'))
+
+    @staticmethod
+    def _resolve_credentials_path(initial_path: Optional[str]) -> str:
+        """Определяет фактический путь к credentials.json.
+        Порядок:
+        1) ENV GOOGLE_CREDENTIALS_PATH или GOOGLE_APPLICATION_CREDENTIALS
+        2) config/credentials.json
+        3) Переданный путь, если существует
+        4) ./credentials.json (текущая директория)
+        """
+        # 1) Переменные окружения
+        for env_key in ("GOOGLE_CREDENTIALS_PATH", "GOOGLE_APPLICATION_CREDENTIALS"):
+            env_path = os.environ.get(env_key)
+            if env_path and os.path.exists(env_path):
+                return env_path
+        
+        # 2) Файл в конфигурации проекта
+        cfg_path = get_config_path('credentials.json')
+        try:
+            if cfg_path.exists():
+                return str(cfg_path)
+        except Exception:
+            pass
+        
+        # 3) Переданный путь
+        if initial_path and os.path.exists(initial_path):
+            return initial_path
+        
+        # 4) Файл в рабочей директории
+        if os.path.exists('credentials.json'):
+            return 'credentials.json'
+        
+        # Возвращаем как есть (дальше authenticate() сообщит об ошибке)
+        return initial_path or 'credentials.json'
         
     def authenticate(self) -> bool:
         """
@@ -75,12 +115,22 @@ class GoogleCalendarAPI:
         try:
             # Проверяем существование файла учетных данных
             if not os.path.exists(self.credentials_path):
-                logger.error(f"Файл учетных данных не найден: {self.credentials_path}")
+                logger.error(
+                    "Файл учетных данных не найден: %s.\n"
+                    "Ожидались пути: %s\n"
+                    "Подсказка: поместите credentials.json в папку config/ или укажите переменную окружения "
+                    "GOOGLE_CREDENTIALS_PATH/GOOGLE_APPLICATION_CREDENTIALS.",
+                    self.credentials_path,
+                    ", ".join([
+                        str(get_config_path('credentials.json')),
+                        os.path.abspath('credentials.json')
+                    ])
+                )
                 return False
             
             # Определяем тип учетных данных
             import json
-            with open(self.credentials_path, 'r') as f:
+            with open(self.credentials_path, 'r', encoding='utf-8') as f:
                 creds_data = json.load(f)
             
             if 'installed' in creds_data:
@@ -103,7 +153,7 @@ class GoogleCalendarAPI:
         """OAuth 2.0 аутентификация"""
         try:
             creds = None
-            token_path = 'token.pickle'
+            token_path = self._token_path
             
             # Загружаем существующий токен
             if os.path.exists(token_path):

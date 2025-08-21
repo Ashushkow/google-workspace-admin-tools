@@ -296,43 +296,75 @@ def add_user_to_group(service: Any, group_email: str, user_email: str) -> str:
         Строка с результатом операции
     """
     try:
-        # Проверяем, является ли service объектом ServiceAdapter
+        # Сначала проверяем, является ли group_email действительно группой
+        print(f"[add_user_to_group] Проверяем, является ли {group_email} группой...")
+        
+        # Получаем прямой доступ к Google API
+        google_service = None
         if hasattr(service, '_users') and hasattr(service, '_groups'):
             # Это ServiceAdapter, получаем прямой доступ к Google API
             try:
                 from ..auth import get_service
                 google_service = get_service()
-                
-                body = {
-                    'email': user_email,
-                    'role': 'MEMBER'
-                }
-                google_service.members().insert(groupKey=group_email, body=body).execute()
-                return f'Пользователь {user_email} добавлен в группу {group_email}.'
-                
             except Exception as e:
-                if 'Member already exists' in str(e):
-                    return f'Пользователь {user_email} уже состоит в группе {group_email}.'
-                print(f"[add_user_to_group] Exception через прямой API: {e}")
-                return f'Ошибка добавления в группу: {e}'
-        
-        # Обычный Google API сервис
-        elif hasattr(service, 'members') and callable(getattr(service, 'members')):
-            body = {
-                'email': user_email,
-                'role': 'MEMBER'
-            }
-            service.members().insert(groupKey=group_email, body=body).execute()
-            return f'Пользователь {user_email} добавлен в группу {group_email}.'
-        
+                print(f"[add_user_to_group] Ошибка получения Google API: {e}")
+                return f'Ошибка получения сервиса Google API: {e}'
         else:
-            return f'Неподдерживаемый тип сервиса: {type(service)}'
+            # Обычный Google API сервис
+            google_service = service
+        
+        if not google_service:
+            return f'Не удалось получить доступ к Google API'
+        
+        # Проверяем, существует ли группа
+        try:
+            group_info = google_service.groups().get(groupKey=group_email).execute()
+            print(f"[add_user_to_group] ✅ {group_email} - это группа: {group_info.get('name', 'N/A')}")
+        except Exception as group_check_error:
+            if '404' in str(group_check_error) or 'notFound' in str(group_check_error):
+                # Дополнительная проверка: может это пользователь?
+                try:
+                    user_info = google_service.users().get(userKey=group_email).execute()
+                    user_name = user_info.get('name', {}).get('fullName', 'N/A')
+                    print(f"[add_user_to_group] ❌ {group_email} - это пользователь: {user_name}")
+                    return f'❌ Ошибка: {group_email} является пользователем ({user_name}), а не группой.\n💡 Для добавления пользователей используйте email группы, например: teamname@sputnik8.com'
+                except Exception:
+                    pass
+                return f'❌ Ошибка: {group_email} не является группой или не существует.\n💡 Убедитесь, что вы указали email группы, а не пользователя.'
+            elif '403' in str(group_check_error) or 'forbidden' in str(group_check_error):
+                # При ошибке 403 тоже проверим, не пользователь ли это
+                try:
+                    user_info = google_service.users().get(userKey=group_email).execute()
+                    user_name = user_info.get('name', {}).get('fullName', 'N/A')
+                    print(f"[add_user_to_group] ❌ {group_email} - это пользователь: {user_name}")
+                    return f'❌ Ошибка: {group_email} является пользователем ({user_name}), а не группой.\n💡 Для добавления пользователей используйте email группы, например: teamname@sputnik8.com'
+                except Exception:
+                    pass
+                return f'❌ Ошибка доступа: Недостаточно прав для проверки группы {group_email}.\n💡 Убедитесь, что у вас есть права администратора групп.'
+            else:
+                return f'❌ Ошибка при проверке группы {group_email}: {group_check_error}'
+        
+        # Если группа существует, добавляем пользователя
+        print(f"[add_user_to_group] Добавляем {user_email} в группу {group_email}...")
+        
+        body = {
+            'email': user_email,
+            'role': 'MEMBER'
+        }
+        
+        result = google_service.members().insert(groupKey=group_email, body=body).execute()
+        return f'✅ Пользователь {user_email} добавлен в группу {group_email}.'
         
     except Exception as e:
         if 'Member already exists' in str(e):
-            return f'Пользователь {user_email} уже состоит в группе {group_email}.'
-        print(f"[add_user_to_group] Exception: {e}")
-        return f'Ошибка добавления в группу: {e}'
+            return f'ℹ️ Пользователь {user_email} уже состоит в группе {group_email}.'
+        elif '403' in str(e):
+            return f'❌ Ошибка доступа (403): Недостаточно прав для добавления пользователя в группу.\n💡 Убедитесь, что:\n  • У вас есть права администратора групп\n  • Группа {group_email} существует и вы имеете к ней доступ\n  • Пользователь {user_email} существует в домене'
+        elif '404' in str(e):
+            return f'❌ Ошибка (404): Группа {group_email} или пользователь {user_email} не найдены.'
+        else:
+            print(f"[add_user_to_group] Exception: {e}")
+            return f'❌ Ошибка добавления в группу: {e}'
 
 
 def remove_user_from_group(service: Any, group_email: str, user_email: str) -> str:

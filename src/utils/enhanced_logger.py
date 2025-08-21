@@ -8,10 +8,17 @@ import logging
 import logging.handlers
 import os
 import sys
+import platform
 from datetime import datetime
 from pathlib import Path
 
 from .file_paths import get_log_path
+
+try:
+    import colorama
+    COLORAMA_AVAILABLE = True
+except Exception:
+    COLORAMA_AVAILABLE = False
 
 class ColoredFormatter(logging.Formatter):
     """Цветной форматтер для консольного вывода"""
@@ -26,7 +33,8 @@ class ColoredFormatter(logging.Formatter):
     RESET = '\033[0m'
 
     def format(self, record):
-        if sys.stdout.isatty():  # Только если терминал поддерживает цвета
+        win = platform.system().lower().startswith('win')
+        if sys.stdout.isatty() and (not win or COLORAMA_AVAILABLE):
             color = self.COLORS.get(record.levelname, '')
             record.levelname = f"{color}{record.levelname}{self.RESET}"
         return super().format(record)
@@ -92,6 +100,13 @@ def setup_logging(log_level: str = "INFO", log_dir: str = "logs") -> logging.Log
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(console_formatter)
     console_handler.setLevel(getattr(logging, log_level.upper()))
+    
+    # Инициализируем colorama на Windows для корректных цветов
+    if COLORAMA_AVAILABLE:
+        try:
+            colorama.just_fix_windows_console()
+        except Exception:
+            pass
     
     # Добавляем handlers
     logger.addHandler(main_handler)

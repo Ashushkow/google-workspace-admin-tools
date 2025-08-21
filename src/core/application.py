@@ -51,15 +51,22 @@ class Application:
             # Настройка DI контейнера
             await self._setup_dependencies()
             
-            # Проверка здоровья системы
+            # Проверка здоровья системы (быстрая проверка без блокировки)
             self.health_checker = HealthChecker()
-            health_status = await self.health_checker.check_all()
-            
-            if not health_status.is_healthy:
-                self.logger.error("Проверка здоровья системы не пройдена")
-                for issue in health_status.issues:
-                    self.logger.error(f"  • {issue}")
-                return False
+            try:
+                # Используем быструю проверку без блокирующих операций
+                health_status = await self._quick_health_check()
+                
+                # Не прерываем запуск при проблемах с API - это будет проверено позже
+                if health_status.has_critical_issues:
+                    self.logger.warning("Обнаружены потенциальные проблемы, но продолжаем запуск...")
+                    for issue in health_status.issues:
+                        if issue.severity == 'critical':
+                            self.logger.warning(f"  ⚠️ {issue.message}")
+                
+            except Exception as health_error:
+                # Не прерываем запуск при ошибке health check
+                self.logger.warning(f"Быстрая проверка здоровья не выполнена: {health_error}")
             
             # Получение сервисов
             self.user_service = container.resolve(UserService)
@@ -125,8 +132,8 @@ class Application:
             # Проверка настроек
             settings = config.settings
             
-            # Проверка файла credentials
-            creds_path = Path(settings.google_application_credentials)
+            # Проверка файла credentials с поддержкой bundle
+            creds_path = config.google.get_credentials_path()
             if not creds_path.exists():
                 raise ConfigurationError(
                     f"Файл credentials не найден: {creds_path}\\n"
@@ -145,10 +152,11 @@ class Application:
                     "Необходимо настроить email администратора в .env файле"
                 )
             
-            # Создание необходимых директорий
-            Path("logs").mkdir(exist_ok=True)
-            Path("data").mkdir(exist_ok=True)
-            Path("cache").mkdir(exist_ok=True)
+            # Создание необходимых директорий с поддержкой bundle
+            from ..utils.resource_path import ensure_resource_dir
+            ensure_resource_dir("logs")
+            ensure_resource_dir("data")
+            ensure_resource_dir("cache")
             
             self.logger.info("✅ Конфигурация валидна")
             
@@ -229,6 +237,78 @@ class Application:
             
         except Exception as e:
             self.logger.error(f"Ошибка при очистке ресурсов: {e}")
+    
+    async def _quick_health_check(self):
+        """Быстрая проверка здоровья без блокирующих операций"""
+        from datetime import datetime
+        from ..utils.health_check import HealthStatus, HealthIssue
+        
+        issues = []
+        start_time = datetime.now()
+        
+        try:
+            # Проверяем только базовые настройки без подключения к API
+            settings = config.settings
+            
+            # Проверка критических настроек
+            if settings.google_workspace_domain == "yourdomain.com":
+                issues.append(HealthIssue(
+                    component="configuration",
+                    severity="critical",
+                    message="Домен Google Workspace не настроен",
+                    details={"setting": "google_workspace_domain"}
+                ))
+            
+            if settings.google_workspace_admin == "admin@yourdomain.com":
+                issues.append(HealthIssue(
+                    component="configuration",
+                    severity="critical",
+                    message="Email администратора не настроен",
+                    details={"setting": "google_workspace_admin"}
+                ))
+            
+            # Проверяем наличие credentials файла (БЕЗ подключения к API)
+            try:
+                creds_path = config.google.get_credentials_path()
+                if not creds_path.exists():
+                    issues.append(HealthIssue(
+                        component="credentials",
+                        severity="warning",  # Понижаем с critical до warning
+                        message=f"Файл credentials не найден: {creds_path}",
+                        details={"path": str(creds_path)}
+                    ))
+                elif creds_path.stat().st_size == 0:
+                    issues.append(HealthIssue(
+                        component="credentials",
+                        severity="warning",
+                        message="Файл credentials пуст"
+                    ))
+            except Exception as e:
+                issues.append(HealthIssue(
+                    component="credentials",
+                    severity="warning",
+                    message=f"Ошибка проверки credentials: {e}"
+                ))
+            
+        except Exception as e:
+            issues.append(HealthIssue(
+                component="quick_check",
+                severity="warning",
+                message=f"Ошибка быстрой проверки: {e}"
+            ))
+        
+        end_time = datetime.now()
+        duration = (end_time - start_time).total_seconds()
+        
+        # Считаем систему здоровой, если нет критических ошибок конфигурации
+        is_healthy = not any(issue.severity == 'critical' for issue in issues)
+        
+        return HealthStatus(
+            is_healthy=is_healthy,
+            issues=issues,
+            last_check=end_time,
+            check_duration=duration
+        )
 
 
 # Функция для запуска приложения

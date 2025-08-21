@@ -11,13 +11,12 @@ from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
-from .config.enhanced_config import config
+from .config.enhanced_config import config, get_domain_admin_email
 
 # Константы для обратной совместимости
 SCOPES = config.google.scopes
 CREDENTIALS_FILE = config.google.credentials_file
 TOKEN_PICKLE = config.google.token_file
-DOMAIN_ADMIN_EMAIL = config.settings.google_workspace_admin
 
 
 def detect_credentials_type() -> str:
@@ -31,12 +30,7 @@ def detect_credentials_type() -> str:
         with open(CREDENTIALS_FILE, 'r', encoding='utf-8') as f:
             creds_data = json.load(f)
             
-        if creds_data.get('type') == 'service_account':
-            return 'service_account'
-        elif 'installed' in creds_data:
-            return 'oauth2'
-        else:
-            raise ValueError("Неизвестный формат credentials.json")
+        return 'service_account' if creds_data.get('type') == 'service_account' else 'oauth2' if 'installed' in creds_data else (_ for _ in ()).throw(ValueError("Неизвестный формат credentials.json"))
             
     except Exception as e:
         raise ValueError(f"Ошибка чтения credentials.json: {e}")
@@ -49,14 +43,18 @@ def get_service_account_credentials():
         scopes=SCOPES
     )
     
+    # Получаем актуальный email администратора
+    domain_admin_email = get_domain_admin_email()
+    
     # Делегирование полномочий администратору домена
-    if DOMAIN_ADMIN_EMAIL != 'admin@yourdomain.com':
-        creds = creds.with_subject(DOMAIN_ADMIN_EMAIL)
+    if domain_admin_email and domain_admin_email != 'admin@yourdomain.com':
+        creds = creds.with_subject(domain_admin_email)
+        print(f"✅ Используем Service Account с делегированием для {domain_admin_email}")
     else:
-        raise ValueError(
-            "Необходимо настроить DOMAIN_ADMIN_EMAIL в src/config.py!\n"
-            "Замените 'admin@yourdomain.com' на email администратора вашего домена."
-        )
+        print("⚠️ ВНИМАНИЕ: Service Account настроен с значениями по умолчанию!")
+        print("⚠️ Для корректной работы необходимо настроить email администратора через мастер настройки.")
+        # НЕ выбрасываем исключение, а возвращаем credentials как есть
+        # Пусть Google API сам выдаст правильную ошибку
     
     return creds
 
@@ -64,10 +62,11 @@ def get_service_account_credentials():
 def get_oauth2_credentials():
     """Получение credentials для OAuth 2.0"""
     creds = None
-    
+    token_path = TOKEN_PICKLE
+    os.makedirs(os.path.dirname(token_path), exist_ok=True)
     # Загружаем существующий токен если есть
-    if os.path.exists(TOKEN_PICKLE):
-        with open(TOKEN_PICKLE, 'rb') as token:
+    if os.path.exists(token_path):
+        with open(token_path, 'rb') as token:
             creds = pickle.load(token)
     
     # Проверяем валидность токена
@@ -132,7 +131,7 @@ def get_oauth2_credentials():
         
         # Сохраняем токен для будущего использования
         if creds:
-            with open(TOKEN_PICKLE, 'wb') as token:
+            with open(token_path, 'wb') as token:
                 pickle.dump(creds, token)
     
     return creds
@@ -151,7 +150,22 @@ def get_service() -> Any:
     Raises:
         FileNotFoundError: Если файл credentials.json не найден
         ValueError: Если формат credentials.json неверный
+        ConfigurationError: Если конфигурация не настроена
     """
+    # Проверяем базовую конфигурацию
+    if not _is_configuration_valid():
+        # Не блокируем полностью - позволяем GUI запуститься для настройки
+        print("⚠️ Конфигурация не настроена полностью")
+        print("💡 Используйте GUI мастер настройки для завершения конфигурации")
+        
+        # Если переменная окружения установлена, то не блокируем
+        if os.getenv('ALLOW_INCOMPLETE_CONFIG', 'False').lower() == 'true':
+            print("🔄 Разрешен запуск с неполной конфигурацией")
+        else:
+            raise ValueError(
+                "Конфигурация не настроена! Запустите приложение и используйте GUI мастер настройки."
+            )
+    
     if not os.path.exists(CREDENTIALS_FILE):
         raise FileNotFoundError(f"Файл {CREDENTIALS_FILE} не найден.")
     
@@ -168,3 +182,23 @@ def get_service() -> Any:
         raise ValueError(f"Неподдерживаемый тип credentials: {creds_type}")
     
     return build('admin', 'directory_v1', credentials=creds)
+
+
+def _is_configuration_valid() -> bool:
+    """Проверяет, настроена ли конфигурация должным образом"""
+    try:
+        # Проверяем основные настройки
+        if config.settings.google_workspace_domain == "yourdomain.com":
+            print("❌ Домен не настроен (значение по умолчанию: yourdomain.com)")
+            return False
+            
+        if config.settings.google_workspace_admin == "admin@yourdomain.com":
+            print("❌ Администратор не настроен (значение по умолчанию: admin@yourdomain.com)")
+            return False
+            
+        print(f"✅ Конфигурация выглядит корректно: {config.settings.google_workspace_domain}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Ошибка проверки конфигурации: {e}")
+        return False

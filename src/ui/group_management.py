@@ -23,13 +23,16 @@ class GroupManagementWindow(tk.Toplevel):
     Включает создание, редактирование, удаление групп и управление членством.
     """
     
-    def __init__(self, master=None, service=None):
+    def __init__(self, master=None, service=None, on_updated: Optional[callable] = None):
         super().__init__(master)
         self.service = service
+        self.on_updated = on_updated
         self.title('Управление группами')
-        self.geometry('800x600')
+        self.geometry('780x580')  # Сделали компактнее: 780x580 вместо 800x600
         self.configure(bg=ModernColors.BACKGROUND)
         self.transient(master)
+        self.resizable(True, True)  # Делаем окно изменяемым
+        self.minsize(750, 550)  # Устанавливаем минимальный размер
         if master:
             center_window(self, master)
             
@@ -39,13 +42,13 @@ class GroupManagementWindow(tk.Toplevel):
 
     def setup_ui(self):
         """Настройка пользовательского интерфейса"""
-        # Заголовок
+        # Заголовок (более компактный)
         title_label = tk.Label(
             self, text='Управление группами',
-            font=('Arial', 16, 'bold'), bg=ModernColors.BACKGROUND,
+            font=('Arial', 14, 'bold'), bg=ModernColors.BACKGROUND,  # Уменьшили шрифт с 16 до 14
             fg=ModernColors.TEXT_PRIMARY
         )
-        title_label.pack(pady=(15, 20))
+        title_label.pack(pady=(10, 15))  # Уменьшили отступы с (15, 20) до (10, 15)
         
         # Основной контейнер
         main_frame = tk.Frame(self, bg=ModernColors.BACKGROUND)
@@ -213,6 +216,9 @@ class GroupManagementWindow(tk.Toplevel):
         
         if dialog.result:
             self.load_groups()
+            # Вызываем callback при успешном создании
+            if self.on_updated:
+                self.on_updated()
 
     def edit_group(self):
         """Редактирование выбранной группы"""
@@ -234,6 +240,9 @@ class GroupManagementWindow(tk.Toplevel):
             
             if dialog.result:
                 self.load_groups()
+                # Вызываем callback при успешном редактировании
+                if self.on_updated:
+                    self.on_updated()
                 
         except Exception as e:
             messagebox.showerror('Ошибка', f'Ошибка при редактировании группы: {str(e)}')
@@ -258,6 +267,9 @@ class GroupManagementWindow(tk.Toplevel):
                     self.selected_group = None
                     self.members_listbox.delete(0, tk.END)
                     self.load_groups()
+                    # Вызываем callback при успешном удалении
+                    if self.on_updated:
+                        self.on_updated()
                 else:
                     messagebox.showerror('Ошибка', 'Не удалось удалить группу')
             except Exception as e:
@@ -276,12 +288,17 @@ class GroupManagementWindow(tk.Toplevel):
         if dialog.result:
             user_email = dialog.result
             try:
-                success = add_user_to_group(self.service, user_email, self.selected_group)
-                if success:
-                    messagebox.showinfo('Успех', f'Пользователь {user_email} добавлен в группу')
+                result = add_user_to_group(self.service, self.selected_group, user_email)
+                
+                # Проверяем результат операции
+                if result.startswith('✅') or result.startswith('ℹ️'):
+                    messagebox.showinfo('Успех', result)
                     self.load_group_members(self.selected_group)
+                    # Callback об успешном обновлении
+                    if getattr(self, 'on_updated', None):
+                        self.on_updated()
                 else:
-                    messagebox.showerror('Ошибка', 'Не удалось добавить пользователя в группу')
+                    messagebox.showerror('Ошибка', result)
             except Exception as e:
                 messagebox.showerror('Ошибка', f'Ошибка добавления пользователя: {str(e)}')
 
@@ -311,6 +328,9 @@ class GroupManagementWindow(tk.Toplevel):
                 if success:
                     messagebox.showinfo('Успех', f'Пользователь {member_email} удален из группы')
                     self.load_group_members(self.selected_group)
+                    # Callback об успешном обновлении
+                    if getattr(self, 'on_updated', None):
+                        self.on_updated()
                 else:
                     messagebox.showerror('Ошибка', 'Не удалось удалить пользователя из группы')
             except Exception as e:

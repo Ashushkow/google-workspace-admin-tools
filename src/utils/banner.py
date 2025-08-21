@@ -58,7 +58,7 @@ def show_oauth2_priority_banner() -> bool:
         print("📋 Для настройки OAuth 2.0 см.: docs/OAUTH2_PRIORITY_SETUP.md")
     
     # Проверяем наличие токена
-    token_path = Path("token.pickle")
+    token_path = Path("config/token.pickle")
     if token_path.exists() and oauth2_detected:
         print("🔑 Токен OAuth 2.0 найден, будет использован для авторизации")
     

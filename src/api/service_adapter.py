@@ -6,7 +6,8 @@
 
 import asyncio
 import logging
-from typing import Any, List, Dict
+import os
+from typing import Any, List, Dict, Optional
 from ..services.user_service import UserService
 from ..services.group_service import GroupService
 
@@ -19,26 +20,25 @@ class ServiceAdapter:
     def __init__(self, user_service: UserService, group_service: GroupService = None):
         self.user_service = user_service
         self.group_service = group_service
-        
+
         # Свойства для обратной совместимости
         self._users = []
         self._groups = []
-        
-        # Инициализируем данные из сервисов
-        self._initialize_data()
+        self._demo_fallback_mode: bool = False
+        self._demo_reason: Optional[str] = None  # Причина, по которой включён демо-режим
+
+        # НЕ инициализируем данные сразу - только при первом обращении
+        self._data_loaded = False
     
     def _initialize_data(self):
-        """Инициализация данных из сервисов"""
+        """Подготовка к отложенной загрузке данных"""
         try:
-            # Простая синхронная инициализация без создания новых event loop'ов
-            print("📊 Подготовка к загрузке данных...")
-            
-            # НЕ инициализируем демо-данные сразу - только при ошибках
-            # Откладываем всю загрузку данных до первого запроса
+            # Не выполняем никаких сетевых операций при создании адаптера
+            print("📊 ServiceAdapter инициализирован (данные будут загружены при первом обращении)")
             self._data_loaded = False
             
         except Exception as e:
-            print(f"Ошибка инициализации данных: {e}")
+            print(f"Ошибка инициализации адаптера: {e}")
             self._demo_fallback_mode = True
             self._initialize_demo_data()
     
@@ -242,19 +242,42 @@ class ServiceAdapter:
                 self._demo_fallback_mode = True
                 self._initialize_demo_data()
     
+    def _activate_demo_fallback(self, reason: str, exc: Exception = None):
+        """Активация режима демонстрационных данных с указанием причины.
+
+        Если установлен DISABLE_DEMO_FALLBACK=true, выбрасывает исключение
+        вместо тихого перехода в демо-режим, чтобы пользователь сразу увидел проблему.
+        """
+        self._demo_reason = reason
+        disable = os.getenv('DISABLE_DEMO_FALLBACK', 'false').lower() == 'true'
+        if disable:
+            # Эскалируем ошибку, не маскируя её демо-режимом
+            raise RuntimeError(f"Demo fallback disabled. Reason: {reason}. Original error: {exc}") from exc
+        self._demo_fallback_mode = True
+        if exc:
+            print(f"⚠️ Переход на демо-данные: {reason} (исключение: {exc})")
+        else:
+            print(f"⚠️ Переход на демо-данные: {reason}")
+        self._initialize_demo_data()
+
     def _initialize_demo_data(self):
         """Инициализация демонстрационных данных как резерв"""
+        print("⚠️ ВНИМАНИЕ: Используются демонстрационные данные!")
+        if self._demo_reason:
+            print(f"⚠️ Причина: {self._demo_reason}")
+        print("⚠️ Проверьте конфигурацию Google API в config/settings.json")
+        
         self._users = [
             {
-                'primaryEmail': 'demo1@example.com',
-                'name': {'fullName': 'Демо Пользователь 1'},
+                'primaryEmail': f'demo1@{self._get_configured_domain()}',
+                'name': {'fullName': 'Демо Пользователь 1 (ТЕСТ)'},
                 'id': 'demo1',
                 'suspended': False,
                 'orgUnitPath': '/'
             },
             {
-                'primaryEmail': 'demo2@example.com',
-                'name': {'fullName': 'Демо Пользователь 2'},
+                'primaryEmail': f'demo2@{self._get_configured_domain()}',
+                'name': {'fullName': 'Демо Пользователь 2 (ТЕСТ)'},
                 'id': 'demo2',
                 'suspended': False,
                 'orgUnitPath': '/'
@@ -279,7 +302,7 @@ class ServiceAdapter:
         ]
         
         # Логируем только в случае fallback'а на демо-данные
-        if hasattr(self, '_demo_fallback_mode'):
+        if self._demo_fallback_mode:
             print(f"⚠️ Используем резервные демо-данные: {len(self._users)} пользователей, {len(self._groups)} групп")
     
     @property
@@ -306,9 +329,8 @@ class ServiceAdapter:
                 # Проверяем режим быстрой загрузки
                 fast_mode = os.getenv('FAST_LOAD_MODE', 'False').lower() == 'true'
                 if fast_mode:
-                    print("🚀 Быстрый режим: используем демо-данные")
-                    self._demo_fallback_mode = True
-                    self._initialize_demo_data()
+                    print("🚀 Быстрый режим активирован")
+                    self._activate_demo_fallback("FAST_LOAD_MODE=true (быстрый режим)")
                     self._data_loaded = True
                     return
                 
@@ -321,9 +343,11 @@ class ServiceAdapter:
                     print("✅ Авторизация успешна!")
                 except (TimeoutError, Exception) as e:
                     print(f"❌ Ошибка авторизации: {e}")
-                    print("🔄 Переключение на демо-данные...")
-                    self._demo_fallback_mode = True
-                    self._initialize_demo_data()
+                    try:
+                        self._activate_demo_fallback("Ошибка авторизации / получения сервиса", e)
+                    except Exception as escalated:
+                        # При отключённом демо-режиме эскалируем исключение выше
+                        raise
                     self._data_loaded = True
                     return
                 
@@ -336,9 +360,11 @@ class ServiceAdapter:
                 while page_count < max_user_pages:
                     # Проверяем тайм-аут
                     if time.time() - start_time > timeout_seconds:
-                        print("⏰ Превышен тайм-аут загрузки, переключение на демо-данные")
-                        self._demo_fallback_mode = True
-                        self._initialize_demo_data()
+                        print("⏰ Превышен тайм-аут загрузки пользователей")
+                        try:
+                            self._activate_demo_fallback("Тайм-аут загрузки пользователей > 120с")
+                        except Exception:
+                            raise
                         self._data_loaded = True
                         return
                     
@@ -397,9 +423,11 @@ class ServiceAdapter:
                     self._users.sort(key=lambda user: user.get('primaryEmail', '').lower())
                     print(f"✅ Загружено {len(self._users)} пользователей!")
                 else:
-                    print("⚠️ Не удалось загрузить пользователей, используем демо-данные")
-                    self._demo_fallback_mode = True
-                    self._initialize_demo_data()
+                    print("⚠️ Не удалось загрузить ни одного пользователя")
+                    try:
+                        self._activate_demo_fallback("Пустой список пользователей из API")
+                    except Exception:
+                        raise
 
                 # Загружаем ВСЕ группы с пагинацией
                 # Проверяем, не потратили ли мы уже слишком много времени на пользователей
@@ -473,8 +501,10 @@ class ServiceAdapter:
                 
             except Exception as e:
                 print(f"❌ Ошибка загрузки данных: {e}")
-                self._demo_fallback_mode = True
-                self._initialize_demo_data()
+                try:
+                    self._activate_demo_fallback("Общая ошибка при загрузке данных", e)
+                except Exception:
+                    raise
                 self._data_loaded = True
 
     def refresh_data(self):
@@ -492,6 +522,50 @@ class ServiceAdapter:
         """Возвращает количество загруженных групп"""
         self._ensure_data_loaded()
         return len(self._groups)
+    
+    def _get_configured_domain(self) -> str:
+        """Получить настроенный домен из конфигурации"""
+        try:
+            from ..config.enhanced_config import config
+            domain = config.settings.google_workspace_domain
+            if domain and domain != "yourdomain.com":
+                return domain
+            return "example.com"
+        except:
+            return "example.com"
+    
+    def get_credentials(self):
+        """
+        Получает credentials, используемые для авторизации Google API
+        
+        Returns:
+            Google credentials object
+        """
+        try:
+            # Импортируем auth только при необходимости
+            from ..auth import get_service
+            
+            # Получаем сервис и извлекаем из него credentials
+            service = get_service()
+            
+            # У сервиса Google API есть свойство _http с credentials
+            if hasattr(service, '_http') and hasattr(service._http, 'credentials'):
+                return service._http.credentials
+            
+            # Альтернативный способ через прямое получение credentials
+            from ..auth import detect_credentials_type, get_service_account_credentials, get_oauth2_credentials
+            
+            creds_type = detect_credentials_type()
+            if creds_type == 'service_account':
+                return get_service_account_credentials()
+            elif creds_type == 'oauth2':
+                return get_oauth2_credentials()
+            else:
+                raise ValueError(f"Неподдерживаемый тип credentials: {creds_type}")
+                
+        except Exception as e:
+            logger.error(f"Ошибка получения credentials: {e}")
+            raise
 
 
 # Функции для обратной совместимости с API

@@ -27,11 +27,12 @@ class DocumentManagementWindow:
         
         self.window = tk.Toplevel(parent)
         self.window.title("📄 Управление доступом к документам")
-        self.window.geometry("700x550")  # Увеличили высоту с 500 до 550
+        self.window.geometry("650x480")  # Сделали компактнее: 650x480 вместо 700x550
         self.window.configure(bg=ModernColors.BACKGROUND)
         self.window.transient(parent)
         self.window.grab_set()
         self.window.resizable(True, True)  # Делаем окно изменяемым по размеру
+        self.window.minsize(620, 450)  # Устанавливаем минимальный размер
         
         # Центрируем окно
         center_window(self.window, parent)
@@ -238,10 +239,10 @@ class DocumentManagementWindow:
             font=('Segoe UI', 9, 'bold'),
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY,
-            padx=6,    # Уменьшили отступы
-            pady=4     # Уменьшили отступы
+            padx=4,    # Еще больше уменьшили отступы
+            pady=2     # Еще больше уменьшили отступы
         )
-        self.doc_info_frame.pack(fill='x', padx=10, pady=6)  # Уменьшили отступы
+        self.doc_info_frame.pack(fill='x', padx=8, pady=4)  # Уменьшили отступы
         
         self.doc_info_label = tk.Label(
             self.doc_info_frame,
@@ -260,10 +261,10 @@ class DocumentManagementWindow:
             font=('Segoe UI', 9, 'bold'),
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY,
-            padx=6,    # Уменьшили отступы
-            pady=4     # Уменьшили отступы
+            padx=4,    # Еще больше уменьшили отступы
+            pady=2     # Еще больше уменьшили отступы
         )
-        access_frame.pack(fill='x', padx=10, pady=6)  # Уменьшили отступы
+        access_frame.pack(fill='x', padx=8, pady=4)  # Уменьшили отступы
         
         # Добавление доступа
         add_access_frame = tk.Frame(access_frame, bg=ModernColors.BACKGROUND)
@@ -342,10 +343,10 @@ class DocumentManagementWindow:
             font=('Segoe UI', 9, 'bold'),
             bg=ModernColors.BACKGROUND,
             fg=ModernColors.TEXT_PRIMARY,
-            padx=6,    # Уменьшили отступы
-            pady=4     # Уменьшили отступы
+            padx=4,    # Еще больше уменьшили отступы
+            pady=2     # Еще больше уменьшили отступы
         )
-        permissions_frame.pack(fill='both', expand=False, padx=10, pady=6)  # Убрали expand=True
+        permissions_frame.pack(fill='both', expand=False, padx=8, pady=4)  # Убрали expand=True
         
         # Таблица разрешений
         columns = ('Email', 'Роль', 'Тип')
@@ -353,7 +354,7 @@ class DocumentManagementWindow:
             permissions_frame,
             columns=columns,
             show='headings',
-            height=6  # Уменьшили высоту таблицы с 8 до 6
+            height=5  # Уменьшили высоту таблицы с 6 до 5
         )
         
         # Настройка колонок
@@ -361,9 +362,9 @@ class DocumentManagementWindow:
         self.permissions_tree.heading('Роль', text='Роль')
         self.permissions_tree.heading('Тип', text='Тип')
         
-        self.permissions_tree.column('Email', width=250)  # Уменьшили ширину
-        self.permissions_tree.column('Роль', width=120)   # Уменьшили ширину
-        self.permissions_tree.column('Тип', width=80)     # Уменьшили ширину
+        self.permissions_tree.column('Email', width=220)  # Еще больше уменьшили ширину
+        self.permissions_tree.column('Роль', width=100)   # Еще больше уменьшили ширину
+        self.permissions_tree.column('Тип', width=70)     # Еще больше уменьшили ширину
         
         # Скроллбар для таблицы
         scrollbar = ttk.Scrollbar(permissions_frame, orient='vertical', command=self.permissions_tree.yview)
@@ -376,8 +377,8 @@ class DocumentManagementWindow:
         self.permissions_tree.bind('<Control-c>', lambda e: self._copy_selected_email())
         
         # Кнопки управления (фиксированы в нижней части)
-        buttons_frame = tk.Frame(self.window, bg=ModernColors.BACKGROUND, height=50)
-        buttons_frame.pack(fill='x', padx=10, pady=10, side='bottom')  # Закрепляем снизу
+        buttons_frame = tk.Frame(self.window, bg=ModernColors.BACKGROUND, height=40)  # Уменьшили высоту с 50 до 40
+        buttons_frame.pack(fill='x', padx=8, pady=6, side='bottom')  # Уменьшили отступы
         buttons_frame.pack_propagate(False)  # Фиксируем высоту
         
         # Создаем внутренний фрейм для центрирования кнопок
@@ -389,14 +390,14 @@ class DocumentManagementWindow:
             text="🔄 Обновить список",  # Добавили иконку
             command=self._refresh_permissions,
             button_type="info"
-        ).pack(side='left', padx=(0, 15), pady=10)
+        ).pack(side='left', padx=(0, 12), pady=6)  # Уменьшили отступы
         
         ModernButton(
             inner_buttons_frame,
             text="❌ Закрыть",  # Добавили иконку
             command=self.window.destroy,
             button_type="secondary"
-        ).pack(side='right', padx=(15, 0), pady=10)
+        ).pack(side='right', padx=(12, 0), pady=6)  # Уменьшили отступы
     
     def _setup_url_context_menu(self):
         """Настройка контекстного меню для поля URL с функциями копирования и вставки"""
